@@ -63,7 +63,8 @@ def login_and_clear_popups(driver, username="mathisha1", password="678910", capt
         login_pg.step(
           "Login Success (CMD 100)",
           "PASSED",
-          "Entered lobby"
+          f"Entered lobby\n"
+          f"[INFO] Initial Wallet: {wallet_before}"
         )
 
 
@@ -73,7 +74,22 @@ def login_and_clear_popups(driver, username="mathisha1", password="678910", capt
     time.sleep(20)
     with allure.step("Clear Lobby Popups"):
         popup = PopupHandler(driver)
-        popup.clear_all_whenever(timeout=30)
+       
+        print("[INFO] Starting smart cleanup...")
+        # 1. Handle Static Popup
+        popup._clear_warning_popup()
+
+        # 2. FIRST chance to catch 305
+        handled_305, received_306 = popup._handle_invitation(context_msg="before UI")
+
+        # 3. Handle Main UI Popup
+        popup._clear_main_ui_popup()
+
+        # 4. SECOND chance to catch 305 (ONLY if not already fully handled)
+        if not handled_305 or not received_306:
+            popup._handle_invitation(context_msg="after UI")
+
+        print("[INFO] Cleanup finished.")
 
         login_pg.step(
           "Popups Cleared",
