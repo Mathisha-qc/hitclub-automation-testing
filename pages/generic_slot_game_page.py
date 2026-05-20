@@ -168,7 +168,7 @@ class GenericSlotGamePage(BasePage):
 
             assert wallet_before is not None, "[FAIL] Could not parse wallet_before."
             allure.attach(f"Wallet Before: {wallet_before}", name="Audit", attachment_type=allure.attachment_type.TEXT)
-            self.log_step("Wallet Before", "PASSED", str(wallet_before))
+            self.log_step("Wallet Before", "PASSED", str(wallet_before), take_screenshot=False)
 
         time.sleep(6)
 
