@@ -12,4 +12,3 @@ class SonThuyGamePage(GenericSlotGamePage):
     auto_hold_seconds = 2.0
     auto_run_seconds = 4.0
     exit_btn = (181, 286)
-    close_btn = (1646, 166)

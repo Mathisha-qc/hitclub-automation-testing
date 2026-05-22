@@ -13,7 +13,7 @@ class TaiXiuMiniGamePage(BasePage):
     # Canvas Coordinates
     # -----------------------------
 
-    OPEN_GAME = (600, 539)
+    #OPEN_GAME = (600, 539)
 
     BET_SIDE = (987, 557)
     CHIP_AMOUNT = (232, 742)
@@ -41,18 +41,27 @@ class TaiXiuMiniGamePage(BasePage):
     @allure.step("Open TaiXiu Mini Game")
     def open_taixiu_mini_game(self):
 
-        self._interact_canvas(
-            x=self.OPEN_GAME[0],
-            y=self.OPEN_GAME[1],
-            wait_after=15.0
+        success = self._wait_and_click_image(
+            image_filename="tai_xiu_icon.png", 
+            timeout=5.0, 
+            wait_after=5.0
         )
-        print("Taixiu mini opened")
+        
+        if success:
+            print("Taixiu mini opened")
+            self.log_step(
+                "Open Game",
+                "PASSED",
+                "TaiXiu Mini opened"
+            )
+        else:
+            self.log_step(
+                "Open Game",
+                "FAILED",
+                "Could not find TaiXiu Mini game icon to click"
+            )
+            raise Exception("Failed to find and click Tai Xiu icon")
 
-        self.log_step(
-            "Open Game",
-            "PASSED",
-            "TaiXiu Mini opened"
-        )
         
 
     @allure.step("Wait for subscription")

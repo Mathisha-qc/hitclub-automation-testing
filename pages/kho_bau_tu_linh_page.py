@@ -12,7 +12,7 @@ class KhoBauGamePage(GenericSlotGamePage):
     auto_hold_seconds = 2.0
     auto_run_seconds = 8.0
     exit_btn = (148, 207)
-    close_btn = (1646, 166)
+    
 
 
     def place_bet_amount(self):

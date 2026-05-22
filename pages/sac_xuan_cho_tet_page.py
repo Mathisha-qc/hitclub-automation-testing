@@ -12,7 +12,7 @@ class SacXuanGamePage(GenericSlotGamePage):
     auto_hold_seconds = 2.0
     auto_run_seconds = 6.0
     exit_btn = (358, 235)
-    close_btn = (1646, 166)
+    
 
 
     def play_btn(self):

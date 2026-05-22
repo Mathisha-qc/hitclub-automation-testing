@@ -13,53 +13,6 @@ class PopupHandler(BasePage):
         super().__init__(driver)
         self.ws = WSEngine(driver, self.log_step)
         
-        # Paths for OpenCV screenshots
-        self.base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        self.assets_dir = os.path.join(self.base_dir, "assets")
-
-    # ==========================================
-    # OpenCV Helper Methods
-    # ==========================================
-    def _is_image_on_screen(self, image_filename, confidence=0.8):
-        template_path = os.path.join(self.assets_dir, image_filename)
-        try:
-            # 1. Take screenshot directly from the browser's internal engine (works even if hidden/minimized!)
-            screenshot_bytes = self.driver.get_screenshot_as_png()
-            
-            # 2. Convert the binary image data into a numpy array for OpenCV
-            nparr = np.frombuffer(screenshot_bytes, np.uint8)
-            screen_img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-            
-            # ---> DEBUG TOOL 1: Save what the bot sees <---
-            # This saves an image to your root folder so you can verify it's looking at the game
-            cv2.imwrite("debug_screen.png", screen_img)
-            
-            template = cv2.imread(template_path, cv2.IMREAD_COLOR)
-            
-            if template is None:
-                print(f"[ERROR] Could not load image template at {template_path}")
-                return False
-
-            result = cv2.matchTemplate(screen_img, template, cv2.TM_CCOEFF_NORMED)
-            _, max_val, _, _ = cv2.minMaxLoc(result)
-            
-            # ---> DEBUG TOOL 2: Print the confidence score <---
-            print(f"[DEBUG] {image_filename} match score: {max_val:.2f} (Needs {confidence})")
-            
-            return max_val >= confidence
-            
-        except Exception as e:
-            print(f"[ERROR] Browser screen reading failed: {e}")
-            return False
-
-    def _wait_for_image_on_screen(self, image_filename, timeout=5, confidence=0.8):
-        start_time = time.time()
-        while time.time() - start_time < timeout:
-            if self._is_image_on_screen(image_filename, confidence):
-                return True
-            time.sleep(0.2)
-        return False
-
     # ==========================================
     # Individual Popup Handlers
     # ==========================================
@@ -84,41 +37,63 @@ class PopupHandler(BasePage):
 
     def _handle_invitation(self, context_msg=""):
         """
-        Handles the CMD 305 Invitation. 
+        Handles the Invitation Popup. Network acts as an alert, but Visual acts as the safety lock.
         Returns a tuple: (handled_305, received_306)
         """
-        print(f"[INFO] Checking CMD 305 ({context_msg})...")
+        print(f"[INFO] Checking for Invitation ({context_msg})...")
         handled_305 = False
         received_306 = False
+        safe_to_click = False
 
+        # --- STEP 1: Check Network (WebSocket) ---
         try:
             ev_305 = self.ws._wait_for_cmd(
                 WS_CMD["INVITATION"],
                 timeout=3,
                 from_cursor=True,
             )
-
             if ev_305:
-                handled_305 = True
-                print(f"[ALERT] CMD 305 detected ({context_msg}) → clicking")
-                self._interact_canvas(x=812, y=671, wait_after=2)
-
-                try:
-                    ev_306 = self.ws._wait_for_cmd(
-                        WS_CMD["INVITATION_CONFIRM"],
-                        timeout=5,
-                        from_cursor=True,
-                        expected_direction="send"
-                    )
-                    if ev_306:
-                        received_306 = True
-                        print("[SUCCESS] CMD 306 received")
-                except AssertionError:
-                    print("[WARN] 306 not received")
-
+                print(f"[ALERT] CMD 305 detected via WebSocket ({context_msg})")
+                
+                # NEW: Network says yes, but we MUST verify the UI actually shows it!
+                print("[INFO] Waiting for UI to render the invitation popup...")
+                if self._wait_for_image_on_screen("invitation_popup.png", timeout=3):
+                    print("[SUCCESS] Invitation verified on screen.")
+                    safe_to_click = True
+                else:
+                    print("[WARN] Ghost Event: Network got 305, but UI never rendered it. Aborting click.")
+                    
         except AssertionError:
-            print(f"[INFO] No CMD 305 ({context_msg})")
+            print(f"[INFO] No CMD 305 via WebSocket ({context_msg})")
+
+        # --- STEP 2: Fallback Visual Check ---
+        # If WebSocket completely missed it, check if it's physically sitting on the screen
+        if not safe_to_click:
+            print(f"[INFO] Checking visually for invitation popup ({context_msg})...")
+            if self._is_image_on_screen("invitation_popup.png"):
+                print(f"[ALERT] Invitation popup detected visually ({context_msg})")
+                safe_to_click = True
+            else:
+                print(f"[INFO] Invitation popup NOT present visually ({context_msg})")
+
+        # --- STEP 3: Safely Click ---
+        # We ONLY click if OpenCV explicitly verified it exists on the screen
+        if safe_to_click:
+            handled_305 = True
+            print("→ clicking invitation...")
+            self._interact_canvas(x=812, y=671, wait_after=2)
+
+            try:
+                ev_306 = self.ws._wait_for_cmd(
+                    WS_CMD["INVITATION_CONFIRM"],
+                    timeout=5,
+                    from_cursor=True,
+                    expected_direction="send"
+                )
+                if ev_306:
+                    received_306 = True
+                    print("[SUCCESS] CMD 306 received")
+            except AssertionError:
+                print("[WARN] 306 not received")
 
         return handled_305, received_306
-
-    

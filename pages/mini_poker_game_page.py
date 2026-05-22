@@ -14,8 +14,8 @@ class MiniPokerGamePage(BasePage):
     # Coordinates
     # -----------------------------------
 
-    OPEN_MENU = (1680, 986)
-    OPEN_GAME = (1779, 873)
+    #OPEN_MENU = (1680, 986)
+    #OPEN_GAME = (1779, 873)
 
     CHIP_100 = (815, 720)
     SPIN_BUTTON = (1434, 569)
@@ -43,23 +43,33 @@ class MiniPokerGamePage(BasePage):
     @allure.step("Open MiniPoker Game")
     def open_mini_poker_game(self):
 
-        self._interact_canvas(
-            x=self.OPEN_MENU[0],
-            y=self.OPEN_MENU[1],
-            wait_after=5.0)
-
-        self._interact_canvas(
-            x=self.OPEN_GAME[0],
-            y=self.OPEN_GAME[1],
-            wait_after=15.0)
-
-        print("MiniPoker opened")
-
-        self.log_step(
-            "Open Game",
-            "PASSED",
-            "MiniPoker opened"
+        self._wait_and_click_image(
+            image_filename="mini_game_icon.png", 
+            timeout=5.0, 
+            wait_after=5.0
         )
+
+        success = self._wait_and_click_image(
+            image_filename="mini_poker_icon.png", 
+            timeout=5.0, 
+            wait_after=5.0
+        )
+
+        if success:
+            print("MiniPoker opened")
+            self.log_step(
+                "Open Game",
+                "PASSED",
+                "MiniPoker opened"
+            )
+        else:
+            self.log_step(
+                "Open Game",
+                "FAILED",
+                "Could not find MiniPoker game icon to click"
+            )
+            raise Exception("Failed to find and click MiniPoker icon")
+
 
     # -----------------------------------
     # Subscription

@@ -15,8 +15,8 @@ class TaiXiuMd5MiniGamePage(BasePage):
     # Coordinates
     # -----------------------------------
 
-    OPEN_MENU = (1680, 986)
-    OPEN_GAME = (1528, 658)
+    #OPEN_MENU = (1680, 986)
+    #OPEN_GAME = (1528, 658)
 
     BET_XIU = (1026, 524)
     BET_TAI = (376, 500)
@@ -47,25 +47,32 @@ class TaiXiuMd5MiniGamePage(BasePage):
     @allure.step("Open TaiXiu-MD5 Mini Game")
     def open_taixiu_md5_mini_game(self):
 
-        self._interact_canvas(
-            x=self.OPEN_MENU[0],
-            y=self.OPEN_MENU[1],
+        self._wait_and_click_image(
+            image_filename="mini_game_icon.png", 
+            timeout=5.0, 
             wait_after=5.0
         )
 
-        self._interact_canvas(
-            x=self.OPEN_GAME[0],
-            y=self.OPEN_GAME[1],
-            wait_after=15.0
+        success = self._wait_and_click_image(
+            image_filename="md5_icon.png", 
+            timeout=5.0, 
+            wait_after=5.0
         )
 
-        print("Taixiu-MD5 mini opened")
-
-        self.log_step(
-            "Open Game",
-            "PASSED",
-            "TaiXiu-MD5 Mini opened"
-        )
+        if success:
+            print("Taixiu-MD5 mini opened")
+            self.log_step(
+                "Open Game",
+                "PASSED",
+                "TaiXiu-MD5 Mini opened"
+            )
+        else:
+            self.log_step(
+                "Open Game",
+                "FAILED",
+                "Could not find TaiXiu-MD5 game icon to click"
+            )
+            raise Exception("Failed to find and click TaiXiu-MD5 icon")
 
     # -----------------------------------
     # Subscription

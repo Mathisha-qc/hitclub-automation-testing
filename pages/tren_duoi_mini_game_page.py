@@ -27,8 +27,8 @@ class TrenDuoiMiniGamePage(BasePage):
     # COORDINATES
     # =====================================================
 
-    OPEN_MENU = (1680, 986)
-    OPEN_GAME = (1506, 796)
+    #OPEN_MENU = (1680, 986)
+    #OPEN_GAME = (1506, 796)
 
     CHIP_1K = (661, 455)
     PLACE_BET = (964, 589)
@@ -78,25 +78,32 @@ class TrenDuoiMiniGamePage(BasePage):
     @allure.step("Open Tren-Duoi Mini Game")
     def open_trenduoi_mini_game(self):
 
-        self._interact_canvas(
-            x=self.OPEN_MENU[0],
-            y=self.OPEN_MENU[1],
+        self._wait_and_click_image(
+            image_filename="mini_game_icon.png", 
+            timeout=5.0, 
             wait_after=5.0
         )
 
-        self._interact_canvas(
-            x=self.OPEN_GAME[0],
-            y=self.OPEN_GAME[1],
-            wait_after=15.0
+        success = self._wait_and_click_image(
+            image_filename="tren_duoi_icon.png", 
+            timeout=5.0, 
+            wait_after=5.0
         )
-
-        print("Tren-Duoi mini opened")
-
-        self.log_step(
-            "Open Game",
-            "PASSED",
-            "Tren-Duoi Mini opened"
-        )
+        
+        if success:
+            print("Tren-Duoi mini opened")
+            self.log_step(
+                "Open Game",
+                "PASSED",
+                "Tren-Duoi Mini opened"
+            )
+        else:
+            self.log_step(
+                "Open Game",
+                "FAILED",
+                "Could not find Tren-Duoi Mini game icon to click"
+            )
+            raise Exception("Failed to find and click Tren-Duoi icon")
 
     # =====================================================
     # SUBSCRIPTION

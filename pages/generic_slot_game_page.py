@@ -12,6 +12,7 @@ from selenium.webdriver.common.action_chains import ActionChains
 from pages.base_page import BasePage
 from core.ws_engine import WSEngine
 from utils.ws_commands import WS_CMD
+from pages.popup_handler import PopupHandler
 
 
 class GenericSlotGamePage(BasePage):
@@ -318,16 +319,16 @@ class GenericSlotGamePage(BasePage):
         return spin_results
 
     exit_btn = (130, 237)
-    close_btn = (1646, 166)
+    
 
     @allure.step("Step 3: Exit Game")
     def exit_game(self, back_btn=None, close_btn=None):
         if back_btn is None:
            back_btn = self.exit_btn
-        if close_btn is None:
-           close_btn = self.close_btn
+        
 
         self._interact_canvas(x=back_btn[0], y=back_btn[1], wait_after=0.4)
         self.ws._wait_for_cmd("10001", timeout=15, from_cursor=True, expected_direction="send")
-        self._interact_canvas(x=close_btn[0], y=close_btn[1], wait_after=0.4)
+        popup = PopupHandler(self.driver)
+        popup._clear_warning_popup()
         self.log_step("Exit Game", "PASSED", f"Exited using {back_btn}, {close_btn}")
