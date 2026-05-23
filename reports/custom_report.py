@@ -5,9 +5,10 @@ from datetime import datetime
 from pathlib import Path
 
 # CMD NAME MAPPING
-from utils.ws_commands import TAIXIU_MINI_CMD, WS_CMD, TAIXIU_MD5_MINI_CMD, TREN_DUOI_CMD, MINI_POKER_CMD
+from utils.ws_commands import XOCDIA_LIVE_CMD, TAIXIU_MINI_CMD, WS_CMD, TAIXIU_MD5_MINI_CMD, TREN_DUOI_CMD, MINI_POKER_CMD
 
 ALL_WS_CMDS = {}
+ALL_WS_CMDS.update({str(v): k for k, v in XOCDIA_LIVE_CMD.items()})
 ALL_WS_CMDS.update({str(v): k for k, v in TAIXIU_MINI_CMD.items()})
 ALL_WS_CMDS.update({str(v): k for k, v in WS_CMD.items()})
 ALL_WS_CMDS.update({str(v): k for k, v in TAIXIU_MD5_MINI_CMD.items()})

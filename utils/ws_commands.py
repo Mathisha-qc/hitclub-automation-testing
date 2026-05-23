@@ -1,17 +1,21 @@
 WS_CMD = {
     "INVITATION": "305",
+    "USER_INFO": "100",
+    "WALLET_UPDATE": "317",
+    "INVITATION_CONFIRM" : "306",
+}
+
+XOCDIA_LIVE_CMD = {
     "SUBSCRIBE": "16000",
     "JOIN_ROOM": "16012",
     "BET_START": "16005",
     "PLACE_BET": "16002",
-    "USER_INFO": "100",
-    "WALLET_UPDATE": "317",
     "END_GAME" : "16006",
     "CHAT" : "16008",
     "REBET" : "16010",
     "LEAVE_ROOM" : "16013",
     "UNSUBSCRIBE": "16001",
-    "INVITATION_CONFIRM" : "306",
+
 }
 
 TAIXIU_MINI_CMD = {

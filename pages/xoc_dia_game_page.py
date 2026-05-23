@@ -1,6 +1,6 @@
 import allure
 from pages.base_page import BasePage
-from utils.ws_commands import WS_CMD
+from utils.ws_commands import XOCDIA_LIVE_CMD,WS_CMD
 from core.ws_engine import WSEngine
 from pages.popup_handler import PopupHandler
 
@@ -19,6 +19,9 @@ class XocDiaGamePage(BasePage):
 
     BET_CHAN = (668, 506)
     BET_LE = (1268, 523)
+
+    CHAT_BOX = (1559, 583)
+    CHAT_SEND = (1804, 578)
 
     BACK_BTN = (77, 214)
     EXIT_BTN = (187, 330)
@@ -76,7 +79,7 @@ class XocDiaGamePage(BasePage):
     def wait_for_subscription(self):
 
         self.ws._wait_for_cmd(
-            WS_CMD["SUBSCRIBE"],
+            XOCDIA_LIVE_CMD["SUBSCRIBE"],
             timeout=5,
             expected_direction="send"
         )
@@ -86,7 +89,7 @@ class XocDiaGamePage(BasePage):
     def join_room(self):
 
         self.ws._wait_for_cmd(
-            WS_CMD["JOIN_ROOM"],
+            XOCDIA_LIVE_CMD["JOIN_ROOM"],
             timeout=5,
             expected_direction="send"
         )
@@ -96,7 +99,7 @@ class XocDiaGamePage(BasePage):
     def wait_for_bet_start(self):
 
         self.ws._wait_for_cmd(
-            WS_CMD["BET_START"],
+            XOCDIA_LIVE_CMD["BET_START"],
             timeout=70
         )
 
@@ -161,7 +164,7 @@ class XocDiaGamePage(BasePage):
     def validating_bet(self):
        
        bet_ev = self.ws._wait_for_cmd(
-            WS_CMD["PLACE_BET"],
+            XOCDIA_LIVE_CMD["PLACE_BET"],
             timeout=10,
             from_cursor=True,
             expected_direction="send"
@@ -229,11 +232,44 @@ class XocDiaGamePage(BasePage):
     @allure.step("End Game")
     def end_game(self):
         self.ws._wait_for_cmd(
-            WS_CMD["END_GAME"], 
+            XOCDIA_LIVE_CMD["END_GAME"], 
             timeout=30, 
             from_cursor=True
         )
         print("End game")
+
+    # -----------------------------------
+    # Chat
+    # -----------------------------------
+
+    @allure.step("Send chat")
+    def send_chat(self, message="Hi"):
+
+        self._interact_canvas(
+            x=self.CHAT_BOX[0],
+            y=self.CHAT_BOX[1],
+            wait_after=4.0
+        )
+
+        chat_input = self.driver.switch_to.active_element
+
+        chat_input.send_keys(message)
+
+        self._interact_canvas(
+            x=self.CHAT_SEND[0],
+            y=self.CHAT_SEND[1],
+            wait_after=1.0
+        )
+
+        chat_ev = self.ws._wait_for_cmd(
+            XOCDIA_LIVE_CMD["CHAT"],
+            timeout=10,
+            from_cursor=True,
+            expected_msg=message,
+            expected_direction="send"
+        )
+
+        return chat_ev
 
     @allure.step("Exit Game")
     def exit_game(self):
@@ -251,14 +287,14 @@ class XocDiaGamePage(BasePage):
         )
 
         self.ws._wait_for_cmd(
-            WS_CMD["LEAVE_ROOM"], 
+            XOCDIA_LIVE_CMD["LEAVE_ROOM"], 
             timeout=20, 
             from_cursor=True,
             expected_direction="send"
         )
 
         self.ws._wait_for_cmd(
-            WS_CMD["UNSUBSCRIBE"], 
+            XOCDIA_LIVE_CMD["UNSUBSCRIBE"], 
             timeout=10, 
             from_cursor=True,
             expected_direction="send"

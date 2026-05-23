@@ -67,7 +67,7 @@ def test_xoc_dia_open_flow(driver):
         assert bet_amount == chip_amount, \
             f"Bet mismatch. Expected={chip_amount}, Actual={bet_amount}"
     
-     # ---------------------------------
+    # ---------------------------------
     # Wallet Validation
     # ---------------------------------
 
@@ -137,6 +137,28 @@ def test_xoc_dia_open_flow(driver):
 
         xd_page.end_game()
 
+    # -----------------------------------
+    # Chat Validation
+    # -----------------------------------
+
+    with allure.step("Validate chat"):
+
+        message = "Hi"
+
+        chat_ev = xd_page.send_chat(message)
+
+        assert chat_ev is not None, \
+            "Chat validation failed"
+
+        xd_page.log_step(
+            "Chat Validation",
+            "PASSED",
+            f"My message validated: {message}"
+        )
+
+        print(
+            f"[PASS] Chat validated: {message}"
+        )
 
     # ---------------------------------
     # Exit Game
