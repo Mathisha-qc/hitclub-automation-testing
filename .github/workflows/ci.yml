@@ -15,48 +15,44 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Show Python version
+        shell: pwsh
         run: |
-          python3 --version
-          python3 -m pip --version
-          python3 -c "import platform; print(platform.machine())"
+          python --version
+          python -m pip --version
+          python -c "import platform; print(platform.machine())"
 
       - name: Install dependencies
+        shell: pwsh
         run: |
-          python3 -m venv .venv
-          source .venv/bin/activate
-          python -m pip install --upgrade pip
-          python -m pip install -r requirements.txt
-
-      - name: Install Linux browser deps
-        if: runner.os == 'Linux'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y tesseract-ocr xvfb
+          python -m venv .venv
+          .\.venv\Scripts\python -m pip install --upgrade pip
+          .\.venv\Scripts\pip install -r requirements.txt
 
       - name: Lint with flake8
+        shell: pwsh
         run: |
-          source .venv/bin/activate
-          flake8 tests/ pages/ core/ conftest.py --count --select=E9,F63,F7,F82 --show-source --statistics
+          .\.venv\Scripts\flake8 tests/ pages/ core/ conftest.py --count --select=E9,F63,F7,F82 --show-source --statistics
 
       - name: Validate required credentials
+        shell: pwsh
         env:
           BASE_URL: ${{ secrets.BASE_URL }}
           TEST_USERNAME: ${{ secrets.TEST_USERNAME }}
           TEST_PASSWORD: ${{ secrets.TEST_PASSWORD }}
         run: |
-          test -n "$BASE_URL" || (echo "Missing BASE_URL in secrets" && exit 1)
-          test -n "$TEST_USERNAME" || (echo "Missing TEST_USERNAME in secrets" && exit 1)
-          test -n "$TEST_PASSWORD" || (echo "Missing TEST_PASSWORD in secrets" && exit 1)
+          if (-not $env:BASE_URL) { throw "Missing BASE_URL in secrets" }
+          if (-not $env:TEST_USERNAME) { throw "Missing TEST_USERNAME in secrets" }
+          if (-not $env:TEST_PASSWORD) { throw "Missing TEST_PASSWORD in secrets" }
 
       - name: Run smoke tests
+        shell: pwsh
         env:
           TEST_USERNAME: ${{ secrets.TEST_USERNAME }}
           TEST_PASSWORD: ${{ secrets.TEST_PASSWORD }}
           TEST_CAPTCHA: ${{ secrets.TEST_CAPTCHA }}
           BASE_URL: ${{ secrets.BASE_URL }}
         run: |
-          source .venv/bin/activate
-          pytest tests/ -m "smoke" --maxfail=1 --tb=short -q -s
+          .\.venv\Scripts\pytest tests/ -m "smoke" --maxfail=1 --tb=short -q -s
 
       - name: Upload Allure results
         if: always()
