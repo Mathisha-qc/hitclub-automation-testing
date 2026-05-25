@@ -7,65 +7,58 @@ on:
 
 jobs:
   nightly:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
+    environment: production
     timeout-minutes: 60
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - name: Set up Python 3.9
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.9"
+      - name: Show Python version
+        run: |
+          python3 --version
+          python3 -m pip --version
+          python3 -c "import platform; print(platform.machine())"
 
       - name: Install dependencies
         run: |
           python3 -m venv .venv
-          ./.venv/bin/python -m pip install --upgrade pip
-          ./.venv/bin/pip install -r requirements.txt
-          sudo apt-get update
-          sudo apt-get install -y tesseract-ocr
+          source .venv/bin/activate
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+          python -m playwright install chromium
 
-      - name: Validate BASE_URL host
+      - name: Install Linux browser deps
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y tesseract-ocr xvfb
+
+      - name: Validate required credentials
         env:
           BASE_URL: ${{ secrets.BASE_URL }}
+          TEST_USERNAME: ${{ secrets.TEST_USERNAME }}
+          TEST_PASSWORD: ${{ secrets.TEST_PASSWORD }}
         run: |
-          ./.venv/bin/python - <<'PY'
-          import os
-          import socket
-          from urllib.parse import urlparse
-
-          base_url = os.getenv("BASE_URL", "").strip()
-          if not base_url:
-              raise SystemExit("BASE_URL secret is empty.")
-          parsed = urlparse(base_url)
-          if parsed.scheme not in ("http", "https") or not parsed.hostname:
-              raise SystemExit(f"BASE_URL is invalid: {base_url}")
-          host = parsed.hostname
-          try:
-              ip = socket.gethostbyname(host)
-          except Exception as exc:
-              raise SystemExit(f"DNS resolution failed for '{host}': {exc}")
-          print(f"Resolved {host} -> {ip}")
-          PY
+          test -n "$BASE_URL" || (echo "Missing BASE_URL in secrets" && exit 1)
+          test -n "$TEST_USERNAME" || (echo "Missing TEST_USERNAME in secrets" && exit 1)
+          test -n "$TEST_PASSWORD" || (echo "Missing TEST_PASSWORD in secrets" && exit 1)
 
       - name: Run full nightly suite
-        run: |
-          mkdir -p results
-          ./.venv/bin/pytest tests/ \
-          --alluredir=allure-results \
-          --tb=short -v \
-          --junitxml=results/nightly-results.xml \
-          --reruns 2 --reruns-delay 5
         env:
           TEST_USERNAME: ${{ secrets.TEST_USERNAME }}
           TEST_PASSWORD: ${{ secrets.TEST_PASSWORD }}
           TEST_CAPTCHA: ${{ secrets.TEST_CAPTCHA }}
           BASE_URL: ${{ secrets.BASE_URL }}
+        run: |
+          source .venv/bin/activate
+          mkdir -p results
+          pytest tests/ --alluredir=allure-results --tb=short -v --junitxml=results/nightly-results.xml --reruns 2 --reruns-delay 5
 
       - name: Upload Allure results
-        uses: actions/upload-artifact@v4
         if: always()
+        uses: actions/upload-artifact@v4
         with:
           name: nightly-results-${{ github.run_number }}
           path: |
