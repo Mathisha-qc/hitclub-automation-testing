@@ -25,7 +25,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y tesseract-ocr
+          sudo apt-get install -y tesseract-ocr xvfb
           pip install -r requirements.txt
 
       - name: Lint with flake8
@@ -58,17 +58,20 @@ jobs:
 
       - name: Run smoke tests
         run: |
-          pytest tests/ -m "smoke" --maxfail=1 --tb=short -q -s
+          xvfb-run -a pytest tests/ -m "smoke" --maxfail=1 --tb=short -q -s
         env:
           TEST_USERNAME: ${{ secrets.TEST_USERNAME }}
           TEST_PASSWORD: ${{ secrets.TEST_PASSWORD }}
           TEST_CAPTCHA: ${{ secrets.TEST_CAPTCHA }}
           BASE_URL: ${{ secrets.BASE_URL }}
+          CI_HEADLESS: "false"
 
       - name: Upload Allure results
         uses: actions/upload-artifact@v4
         if: always()
         with:
           name: smoke-results-${{ github.run_number }}
-          path: allure-results/
+          path: |
+            allure-results/
+            reports/ci_debug/
           if-no-files-found: warn

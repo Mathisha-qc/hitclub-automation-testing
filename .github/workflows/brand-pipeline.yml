@@ -33,7 +33,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y tesseract-ocr
+          sudo apt-get install -y tesseract-ocr xvfb
           pip install -r requirements.txt
 
       - name: Validate BASE_URL host
@@ -61,7 +61,7 @@ jobs:
 
       - name: Run full suite
         run: |
-          pytest tests/ \
+          xvfb-run -a pytest tests/ \
           --alluredir=allure-results \
           --tb=short -v
         env:
@@ -69,6 +69,7 @@ jobs:
           TEST_PASSWORD: ${{ secrets.TEST_PASSWORD }}
           TEST_CAPTCHA: ${{ secrets.TEST_CAPTCHA }}
           BASE_URL: ${{ secrets.BASE_URL }}
+          CI_HEADLESS: "false"
 
       - name: Upload results
         uses: actions/upload-artifact@v4
