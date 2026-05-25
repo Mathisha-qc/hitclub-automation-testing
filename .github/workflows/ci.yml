@@ -6,7 +6,7 @@ on:
 
 jobs:
   lint-and-smoke:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     environment: production
     timeout-minutes: 60
 
