@@ -4,18 +4,23 @@ from pages.login_page import LoginPage
 from pages.popup_handler import PopupHandler
 from core.ws_engine import WSEngine
 from utils.ws_commands import WS_CMD
+from config.config import TestData
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 
 @allure.step("Login and clear popups")
-def login_and_clear_popups(driver, username="mathisha1", password="678910", captcha="ma"):
+def login_and_clear_popups(driver, username=None, password=None, captcha=None):
+    username = username or TestData.username
+    password = password or TestData.password
+    captcha = captcha or TestData.captcha
+
     login_pg = LoginPage(driver)
 
     ws = WSEngine(driver, login_pg.log_step)
     
     with allure.step("Open website"):
-      driver.get("https://v.hitclub.pl/")
+      driver.get(TestData.base_url)
       
       
 

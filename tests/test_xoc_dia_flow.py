@@ -1,5 +1,6 @@
 import time
 import allure
+import pytest
 
 from tests.login_popup_flow import login_and_clear_popups
 from pages.xoc_dia_game_page import XocDiaGamePage
@@ -7,6 +8,7 @@ from reports.custom_report import report
 
 @allure.feature("Xoc Dia")
 @allure.story("Open game entry flow")
+@pytest.mark.smoke
 def test_xoc_dia_open_flow(driver):
 
     report.game_name = "Xoc Dia Live2"

@@ -1,0 +1,48 @@
+name: PR Validation
+
+on:
+  pull_request:
+    branches: [develop, main]
+
+jobs:
+  lint-and-smoke:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.9
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.9"
+
+      - name: Cache pip dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Lint with flake8
+        run: flake8 tests/ pages/ core/ conftest.py --max-line-length=120 --ignore=E501,W503
+
+      - name: Run smoke tests
+        run: |
+          pytest tests/ -m "smoke" \
+          --alluredir=allure-results \
+          --tb=short -q
+        env:
+          TEST_USERNAME: ${{ secrets.TEST_USERNAME }}
+          TEST_PASSWORD: ${{ secrets.TEST_PASSWORD }}
+          TEST_CAPTCHA: ${{ secrets.TEST_CAPTCHA }}
+          BASE_URL: ${{ secrets.BASE_URL }}
+
+      - name: Upload Allure results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: smoke-results-${{ github.run_number }}
+          path: allure-results/
+          if-no-files-found: warn

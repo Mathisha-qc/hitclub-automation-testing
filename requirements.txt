@@ -8,6 +8,9 @@ pyautogui
 mss
 numpy
 Pillow
+flake8
+pytest-xdist
+pytest-rerunfailures
 
 
 

@@ -13,6 +13,7 @@ from selenium.webdriver.chrome.options import Options
 from webdriver_manager.chrome import ChromeDriverManager
 from utils.screen_recorder import ScreenRecorder
 from reports.custom_report import report, write_html_report
+from config.config import TestData
 
 
 def log_runtime(message: str):
@@ -22,10 +23,15 @@ def log_runtime(message: str):
 
 
 def pytest_configure(config):
+    TestData.username = os.getenv("TEST_USERNAME", TestData.username)
+    TestData.password = os.getenv("TEST_PASSWORD", TestData.password)
+    TestData.captcha = os.getenv("TEST_CAPTCHA", TestData.captcha)
+    TestData.base_url = os.getenv("BASE_URL", TestData.base_url)
+
     # This adds a custom 'Environment' section to your Allure Dashboard
     report.title = "HitClub Automation Report"
-    report.base_url = "https://v.hitclub.sc/"
-    report.username = "Mathisha1"
+    report.base_url = TestData.base_url
+    report.username = TestData.username
     report.browser_name = "Chrome"
     report.captcha_mode = "Auto"
     report.game_name = "Lobby"   # default (will override per game)

@@ -1,5 +1,6 @@
 import allure
 import time
+import pytest
 from tests.login_popup_flow import login_and_clear_popups
 from pages.kho_bau_tu_linh_page import KhoBauGamePage
 from reports.custom_report import report
@@ -7,6 +8,7 @@ from reports.custom_report import report
 
 @allure.feature("Kho Bau Tu Linh Game")
 @allure.story("Open game entry flow")
+@pytest.mark.smoke
 
 def test_kho_bau_flow(driver):
     report.game_name = "Kho Bau Tu Linh"
