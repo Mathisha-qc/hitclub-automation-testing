@@ -1,6 +1,5 @@
 import time
 import allure
-from pathlib import Path
 from pages.login_page import LoginPage
 from pages.popup_handler import PopupHandler
 from core.ws_engine import WSEngine
@@ -9,7 +8,6 @@ from config.config import TestData
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
-from selenium.common.exceptions import TimeoutException
 
 @allure.step("Login and clear popups")
 def login_and_clear_popups(driver, username=None, password=None, captcha=None):
@@ -27,21 +25,9 @@ def login_and_clear_popups(driver, username=None, password=None, captcha=None):
       
 
     with allure.step("Wait for Game Engine"):
-        try:
-            WebDriverWait(driver, 60).until(
-                EC.presence_of_element_located((By.TAG_NAME, "canvas"))
-            )
-        except TimeoutException as exc:
-            debug_dir = Path("reports/ci_debug")
-            debug_dir.mkdir(parents=True, exist_ok=True)
-            ts = int(time.time())
-            screenshot_path = debug_dir / f"canvas_timeout_{ts}.png"
-            html_path = debug_dir / f"canvas_timeout_{ts}.html"
-            driver.save_screenshot(str(screenshot_path))
-            html_path.write_text(driver.page_source, encoding="utf-8")
-            raise AssertionError(
-                f"Canvas not loaded in 60s. Saved {screenshot_path} and {html_path}"
-            ) from exc
+        WebDriverWait(driver, 60).until(
+            EC.presence_of_element_located((By.TAG_NAME, "canvas"))
+        )
 
         time.sleep(5)
 

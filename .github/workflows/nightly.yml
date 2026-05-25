@@ -7,7 +7,8 @@ on:
 
 jobs:
   nightly:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64]
+    timeout-minutes: 60
 
     steps:
       - uses: actions/checkout@v4
@@ -17,23 +18,19 @@ jobs:
         with:
           python-version: "3.9"
 
-      - name: Cache pip
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
-
       - name: Install dependencies
         run: |
+          python3 -m venv .venv
+          ./.venv/bin/python -m pip install --upgrade pip
+          ./.venv/bin/pip install -r requirements.txt
           sudo apt-get update
-          sudo apt-get install -y tesseract-ocr xvfb
-          pip install -r requirements.txt
+          sudo apt-get install -y tesseract-ocr
 
       - name: Validate BASE_URL host
         env:
           BASE_URL: ${{ secrets.BASE_URL }}
         run: |
-          python - <<'PY'
+          ./.venv/bin/python - <<'PY'
           import os
           import socket
           from urllib.parse import urlparse
@@ -55,7 +52,7 @@ jobs:
       - name: Run full nightly suite
         run: |
           mkdir -p results
-          xvfb-run -a pytest tests/ \
+          ./.venv/bin/pytest tests/ \
           --alluredir=allure-results \
           --tb=short -v \
           --junitxml=results/nightly-results.xml \
@@ -65,7 +62,6 @@ jobs:
           TEST_PASSWORD: ${{ secrets.TEST_PASSWORD }}
           TEST_CAPTCHA: ${{ secrets.TEST_CAPTCHA }}
           BASE_URL: ${{ secrets.BASE_URL }}
-          CI_HEADLESS: "false"
 
       - name: Upload Allure results
         uses: actions/upload-artifact@v4

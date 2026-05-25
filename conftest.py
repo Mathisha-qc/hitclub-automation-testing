@@ -47,10 +47,7 @@ def driver():
     chrome_options = Options()
 
     is_ci = bool(os.getenv("JENKINS_URL")) or os.getenv("CI", "").lower() == "true"
-    ci_headless = os.getenv("CI_HEADLESS", "true").lower() == "true"
-    run_mode = "Jenkins/CI Headless" if (is_ci and ci_headless) else (
-        "Jenkins/CI Headed (Xvfb)" if is_ci else "Local Visible Chrome"
-    )
+    run_mode = "Jenkins/CI Headless" if is_ci else "Local Visible Chrome"
     log_runtime(f"Driver setup started. Mode: {run_mode}")
     
     # This is the "Magic" flag that keeps the browser open after the script ends
@@ -79,7 +76,7 @@ def driver():
     chrome_options.add_argument("--disable-renderer-backgrounding")
     chrome_options.add_argument("--disable-backgrounding-occluded-windows")
 
-    if is_ci and ci_headless:
+    if is_ci:
         chrome_options.add_argument("--headless=new")
         chrome_options.add_argument("--window-size=1920,1080")
         chrome_options.add_argument("--no-sandbox")
