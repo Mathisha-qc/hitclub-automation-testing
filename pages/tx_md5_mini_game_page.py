@@ -1,6 +1,5 @@
 import allure
 import hashlib
-import pyperclip
 
 from pages.base_page import BasePage
 from utils.ws_commands import TAIXIU_MD5_MINI_CMD, WS_CMD

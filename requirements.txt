@@ -8,6 +8,7 @@ pyautogui; platform_system == "Windows"
 mss
 numpy
 Pillow
+pytesseract
 flake8
 pytest-xdist
 pytest-rerunfailures

@@ -5,6 +5,8 @@ import time
 import cv2
 import numpy as np
 import pytesseract
+import os
+import shutil
 
 from pages.base_page import BasePage
 from utils.ws_commands import (
@@ -14,9 +16,15 @@ from utils.ws_commands import (
 from core.ws_engine import WSEngine
 
 
-pytesseract.pytesseract.tesseract_cmd = (
-    r"C:\Users\mathi\AppData\Local\Programs\Tesseract-OCR\tesseract.exe"
-)
+if os.name == "nt":
+    pytesseract.pytesseract.tesseract_cmd = (
+        r"C:\Users\mathi\AppData\Local\Programs\Tesseract-OCR\tesseract.exe"
+    )
+else:
+    # Use system-installed tesseract on Linux CI runners.
+    detected_tesseract = shutil.which("tesseract")
+    if detected_tesseract:
+        pytesseract.pytesseract.tesseract_cmd = detected_tesseract
 
 
 @allure.feature("Game Mechanics")
