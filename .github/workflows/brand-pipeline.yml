@@ -36,6 +36,29 @@ jobs:
           sudo apt-get install -y tesseract-ocr
           pip install -r requirements.txt
 
+      - name: Validate BASE_URL host
+        env:
+          BASE_URL: ${{ secrets.BASE_URL }}
+        run: |
+          python - <<'PY'
+          import os
+          import socket
+          from urllib.parse import urlparse
+
+          base_url = os.getenv("BASE_URL", "").strip()
+          if not base_url:
+              raise SystemExit("BASE_URL secret is empty.")
+          parsed = urlparse(base_url)
+          if parsed.scheme not in ("http", "https") or not parsed.hostname:
+              raise SystemExit(f"BASE_URL is invalid: {base_url}")
+          host = parsed.hostname
+          try:
+              ip = socket.gethostbyname(host)
+          except Exception as exc:
+              raise SystemExit(f"DNS resolution failed for '{host}': {exc}")
+          print(f"Resolved {host} -> {ip}")
+          PY
+
       - name: Run full suite
         run: |
           pytest tests/ \

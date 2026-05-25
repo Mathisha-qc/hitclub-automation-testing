@@ -7,4 +7,4 @@ class TestData:
     username = os.getenv("TEST_USERNAME", "your_local_test_user")
     password = os.getenv("TEST_PASSWORD", "your_local_test_pass")
     captcha = os.getenv("TEST_CAPTCHA", "ma")
-    base_url = os.getenv("BASE_URL", "https://v.hitclub.sc/")
+    base_url = os.getenv("BASE_URL", "https://v.hit.club/")
