@@ -1,6 +1,7 @@
 import pytest
 import time
 import os
+import re
 import tempfile
 import shutil
 import zipfile
@@ -208,8 +209,10 @@ def pytest_sessionfinish(session, exitstatus):
 
     try:
         # 1. CREATE THE PERFECT ZIP FILE FOR SHARING
-        safe_game_name = report.game_name.replace(" ", "_") if report.game_name else "Game"
-        zip_name = f"reports/{safe_game_name}_Report_{int(time.time())}.zip"
+        safe_game_name_raw = report.game_name if report.game_name else "Game"
+        safe_game_name = re.sub(r"[^A-Za-z0-9_-]+", "_", safe_game_name_raw).strip("_") or "Game"
+        run_stamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+        zip_name = f"reports/{safe_game_name}_Report_{run_stamp}.zip"
         zip_path = Path(zip_name).resolve()
         
         import zipfile
