@@ -49,6 +49,7 @@ jobs:
           TEST_PASSWORD: ${{ secrets.TEST_PASSWORD }}
           TEST_CAPTCHA: ${{ secrets.TEST_CAPTCHA }}
           BASE_URL: ${{ secrets.BASE_URL }}
+          FORCE_VISIBLE_BROWSER: ${{ vars.FORCE_VISIBLE_BROWSER }}
         run: |
           if not exist results mkdir results
           .\.venv\Scripts\pytest tests/ --alluredir=allure-results --tb=short -v --junitxml=results/nightly-results.xml --reruns 2 --reruns-delay 5

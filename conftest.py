@@ -47,11 +47,13 @@ def driver():
     chrome_options = Options()
 
     is_ci = bool(os.getenv("JENKINS_URL")) or os.getenv("CI", "").lower() == "true"
-    run_mode = "Jenkins/CI Headless" if is_ci else "Local Visible Chrome"
+    force_visible = os.getenv("FORCE_VISIBLE_BROWSER", "").lower() in ("1", "true", "yes")
+    is_headless = is_ci and not force_visible
+    run_mode = "CI Headless" if is_headless else "Visible Chrome"
     log_runtime(f"Driver setup started. Mode: {run_mode}")
     
     # This is the "Magic" flag that keeps the browser open after the script ends
-    if not is_ci:
+    if not is_headless:
         chrome_options.add_experimental_option("detach", True)
 
     chrome_options.set_capability('goog:loggingPrefs', {'performance': 'INFO'})
@@ -76,7 +78,7 @@ def driver():
     chrome_options.add_argument("--disable-renderer-backgrounding")
     chrome_options.add_argument("--disable-backgrounding-occluded-windows")
 
-    if is_ci:
+    if is_headless:
         chrome_options.add_argument("--headless=new")
         chrome_options.add_argument("--window-size=1920,1080")
         chrome_options.add_argument("--no-sandbox")
