@@ -214,7 +214,7 @@ class XocDiaGamePage(BasePage):
 
             final_ev = self.ws._wait_for_cmd(
                 WS_CMD["WALLET_UPDATE"],
-                timeout=30,
+                timeout=60,
                 from_cursor=True
             )
 

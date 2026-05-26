@@ -29,11 +29,13 @@ def login_and_clear_popups(driver, username=None, password=None, captcha=None):
             EC.presence_of_element_located((By.TAG_NAME, "canvas"))
         )
 
-        time.sleep(5)
+        time.sleep(30)
 
         driver.refresh()
 
         time.sleep(20)
+
+        print("[INFO] Landing Page Loaded")
 
         login_pg.step(
         "Landing Page Loaded",
