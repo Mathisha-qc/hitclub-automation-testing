@@ -80,7 +80,7 @@ class PopupHandler(BasePage):
         # We ONLY click if OpenCV explicitly verified it exists on the screen
         if safe_to_click:
             handled_305 = True
-            print("→ clicking invitation...")
+            print("[INFO] clicking invitation...")
             self._interact_canvas(x=812, y=671, wait_after=2)
 
             try:
