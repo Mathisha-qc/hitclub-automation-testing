@@ -92,44 +92,56 @@ class BasePage:
         
     
     # CANVAS INTERACTION 
-    def _interact_canvas(self, x, y, text=None, wait_after=1.0):
+    def _interact_canvas(self, x, y, text=None, wait_after=1.0, retries=3):
+        # Headless-safe interaction: wait for page + canvas readiness, then retry dispatch.
+        self.wait.until(lambda d: d.execute_script("return document.readyState") in ("interactive", "complete"))
+        last_error = None
 
-        canvas = self.wait.until(
-            EC.presence_of_element_located(self.CANVAS)
-        )
+        for _ in range(retries):
+            try:
+                canvas = self.wait.until(EC.presence_of_element_located(self.CANVAS))
+                self.driver.execute_script("arguments[0].scrollIntoView({block:'center', inline:'center'});", canvas)
 
-        self.driver.execute_script(
-            """
-            const canvas = arguments[0];
-            const x = arguments[1];
-            const y = arguments[2];
+                self.driver.execute_script(
+                    """
+                    const canvas = arguments[0];
+                    const x = arguments[1];
+                    const y = arguments[2];
 
-            function fire(type) {
-              const evt = new MouseEvent(type, {
-                bubbles: true,
-                cancelable: true,
-                view: window,
-                clientX: canvas.getBoundingClientRect().left + x,
-                clientY: canvas.getBoundingClientRect().top + y
-              });
-              canvas.dispatchEvent(evt);
-            }
+                    function fire(type) {
+                      const rect = canvas.getBoundingClientRect();
+                      const evt = new MouseEvent(type, {
+                        bubbles: true,
+                        cancelable: true,
+                        view: window,
+                        clientX: rect.left + x,
+                        clientY: rect.top + y
+                      });
+                      canvas.dispatchEvent(evt);
+                    }
 
-            fire('mousemove');
-            fire('mousedown');
-            fire('mouseup');
-            fire('click');
-            """,
-            canvas, x, y
-        )
+                    fire('mousemove');
+                    fire('mousedown');
+                    fire('mouseup');
+                    fire('click');
+                    """,
+                    canvas, x, y
+                )
 
-        if text:
-            self.driver.execute_script(
-                "document.activeElement && document.activeElement.focus();"
-            )
-            self.driver.switch_to.active_element.send_keys(text)
+                if text:
+                    self.driver.execute_script("document.activeElement && document.activeElement.focus();")
+                    active = self.driver.switch_to.active_element
+                    active.clear()
+                    active.send_keys(text)
 
-        time.sleep(wait_after)
+                time.sleep(wait_after)
+                return
+            except Exception as exc:
+                last_error = exc
+                time.sleep(0.6)
+
+        if last_error:
+            raise last_error
 
     def _find_image_coordinates(self, image_filename, confidence=0.8):
         """
