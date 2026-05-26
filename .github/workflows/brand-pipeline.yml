@@ -27,14 +27,14 @@ jobs:
       - name: Show Python version
         shell: cmd
         run: |
-          py --version
-          py -3 -m pip --version
-          py -3 -c "import platform; print(platform.machine())"
+          python --version
+          python -m pip --version
+          python -c "import platform; print(platform.machine())"
 
       - name: Install dependencies
         shell: cmd
         run: |
-          py -3 -m venv .venv
+          python -m venv .venv
           .\.venv\Scripts\python -m pip install --upgrade pip
           .\.venv\Scripts\pip install -r requirements.txt
 
