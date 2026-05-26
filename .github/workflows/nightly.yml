@@ -10,6 +10,8 @@ jobs:
     runs-on: self-hosted
     environment: production
     timeout-minutes: 60
+    env:
+      PYTHON_EXE: C:\Program Files\Python311\python.exe
 
     steps:
       - name: Checkout
@@ -20,14 +22,14 @@ jobs:
       - name: Show Python version
         shell: cmd
         run: |
-          python --version
-          python -m pip --version
-          python -c "import platform; print(platform.machine())"
+          "%PYTHON_EXE%" --version
+          "%PYTHON_EXE%" -m pip --version
+          "%PYTHON_EXE%" -c "import platform; print(platform.machine())"
 
       - name: Install dependencies
         shell: cmd
         run: |
-          python -m venv .venv
+          "%PYTHON_EXE%" -m venv .venv
           .\.venv\Scripts\python -m pip install --upgrade pip
           .\.venv\Scripts\pip install -r requirements.txt
 
