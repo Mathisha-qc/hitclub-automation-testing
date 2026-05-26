@@ -46,7 +46,17 @@ def login_and_clear_popups(driver, username=None, password=None, captcha=None):
     with allure.step("Input Credentials"):
         login_pg.click_login_menu()
         time.sleep(2)
+        login_pg.step(
+        "click_login_menu",
+        "PASSED",
+        "login menu clicled successfully"
+        )
         login_pg.enter_user(username)
+        login_pg.step(
+        "username",
+        "PASSED",
+        "username successfully"
+        )
         login_pg.enter_pass(password)
         login_pg.enter_cap(captcha)
         login_pg.click_final_submit()
