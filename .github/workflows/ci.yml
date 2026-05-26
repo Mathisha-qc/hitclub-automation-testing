@@ -11,6 +11,7 @@ jobs:
     timeout-minutes: 60
     env:
       PYTHON_EXE: C:\Program Files\Python311\python.exe
+      PYTHONUNBUFFERED: "1"
 
     steps:
       - name: Checkout
@@ -57,7 +58,7 @@ jobs:
           BASE_URL: ${{ secrets.BASE_URL }}
           FORCE_VISIBLE_BROWSER: ${{ vars.FORCE_VISIBLE_BROWSER }}
         run: |
-          .\.venv\Scripts\pytest tests/ -m "smoke" --maxfail=1 --tb=short -q -s
+          .\.venv\Scripts\python -u -m pytest tests/ -m "smoke" --maxfail=1 --tb=short -q -s
 
       - name: Upload Allure results
         if: always()
