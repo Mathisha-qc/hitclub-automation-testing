@@ -8,6 +8,7 @@ import numpy as np
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
+from selenium.webdriver.common.action_chains import ActionChains
 
 from reports.custom_report import report , ReportStep
 
@@ -93,7 +94,7 @@ class BasePage:
     
     # CANVAS INTERACTION 
     def _interact_canvas(self, x, y, text=None, wait_after=1.0, retries=3):
-        # Headless-safe interaction: wait for page + canvas readiness, then retry dispatch.
+        # Wait for page + canvas first, then perform native pointer actions.
         self.wait.until(lambda d: d.execute_script("return document.readyState") in ("interactive", "complete"))
         last_error = None
 
@@ -102,43 +103,73 @@ class BasePage:
                 canvas = self.wait.until(EC.presence_of_element_located(self.CANVAS))
                 self.driver.execute_script("arguments[0].scrollIntoView({block:'center', inline:'center'});", canvas)
 
-                self.driver.execute_script(
-                    """
-                    const canvas = arguments[0];
-                    const x = arguments[1];
-                    const y = arguments[2];
-
-                    function fire(type) {
-                      const rect = canvas.getBoundingClientRect();
-                      const evt = new MouseEvent(type, {
-                        bubbles: true,
-                        cancelable: true,
-                        view: window,
-                        clientX: rect.left + x,
-                        clientY: rect.top + y
-                      });
-                      canvas.dispatchEvent(evt);
-                    }
-
-                    fire('mousemove');
-                    fire('mousedown');
-                    fire('mouseup');
-                    fire('click');
-                    """,
-                    canvas, x, y
+                rect = self.driver.execute_script(
+                    "const r = arguments[0].getBoundingClientRect();"
+                    "return {w: Math.floor(r.width), h: Math.floor(r.height)};",
+                    canvas
                 )
 
+                width = max(int(rect.get("w", 0)), 1)
+                height = max(int(rect.get("h", 0)), 1)
+                local_x = max(1, min(int(x), width - 2 if width > 2 else 1))
+                local_y = max(1, min(int(y), height - 2 if height > 2 else 1))
+
+                # Native Selenium click registers better in headless canvas flows.
+                # We move to canvas center first, then apply relative offset.
+                offset_x = local_x - (width // 2)
+                offset_y = local_y - (height // 2)
+
+                actions = ActionChains(self.driver)
+                actions.move_to_element(canvas)
+                actions.move_by_offset(offset_x, offset_y)
+                actions.pause(0.05)
+                actions.click()
+                actions.perform()
+
                 if text:
-                    self.driver.execute_script("document.activeElement && document.activeElement.focus();")
-                    active = self.driver.switch_to.active_element
-                    active.clear()
-                    active.send_keys(text)
+                    # Type into whichever input got focus after canvas click.
+                    ActionChains(self.driver).send_keys(text).perform()
 
                 time.sleep(wait_after)
                 return
             except Exception as exc:
                 last_error = exc
-                time.sleep(0.6)
+                try:
+                    # Fallback to JS event dispatch if native pointer action fails.
+                    canvas = self.wait.until(EC.presence_of_element_located(self.CANVAS))
+                    self.driver.execute_script(
+                        """
+                        const canvas = arguments[0];
+                        const x = arguments[1];
+                        const y = arguments[2];
+                        const rect = canvas.getBoundingClientRect();
+                        const clientX = rect.left + x;
+                        const clientY = rect.top + y;
+
+                        function fire(type) {
+                          const evt = new MouseEvent(type, {
+                            bubbles: true,
+                            cancelable: true,
+                            view: window,
+                            clientX: clientX,
+                            clientY: clientY
+                          });
+                          canvas.dispatchEvent(evt);
+                        }
+
+                        fire('mousemove');
+                        fire('mousedown');
+                        fire('mouseup');
+                        fire('click');
+                        """,
+                        canvas, int(x), int(y)
+                    )
+                    if text:
+                        ActionChains(self.driver).send_keys(text).perform()
+                    time.sleep(wait_after)
+                    return
+                except Exception:
+                    time.sleep(0.6)
 
         if last_error:
             raise last_error
