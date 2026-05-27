@@ -96,24 +96,55 @@ class BasePage:
         
     
     # CANVAS INTERACTION 
+    def _dispatch_cdp_click(self, abs_x, abs_y):
+        # CDP click is very reliable in headless Chrome canvas flows.
+        self.driver.execute_cdp_cmd(
+            "Input.dispatchMouseEvent",
+            {"type": "mouseMoved", "x": int(abs_x), "y": int(abs_y), "button": "none"}
+        )
+        self.driver.execute_cdp_cmd(
+            "Input.dispatchMouseEvent",
+            {"type": "mousePressed", "x": int(abs_x), "y": int(abs_y), "button": "left", "clickCount": 1}
+        )
+        self.driver.execute_cdp_cmd(
+            "Input.dispatchMouseEvent",
+            {"type": "mouseReleased", "x": int(abs_x), "y": int(abs_y), "button": "left", "clickCount": 1}
+        )
+
+    def _type_focused_text(self, text):
+        ActionChains(self.driver).pause(0.05).perform()
+        ActionChains(self.driver) \
+            .key_down(Keys.CONTROL) \
+            .send_keys("a") \
+            .key_up(Keys.CONTROL) \
+            .send_keys(Keys.BACKSPACE) \
+            .send_keys(str(text)) \
+            .perform()
+
     def _interact_canvas(self, x, y, text=None, wait_after=1.0, retries=3, coord_space="reference"):
         # Wait for page + canvas first, then perform native pointer actions.
         self.wait.until(lambda d: d.execute_script("return document.readyState") in ("interactive", "complete"))
         last_error = None
 
         for _ in range(retries):
+            width = 1
+            height = 1
+            local_x = int(x) if isinstance(x, (int, float)) else 1
+            local_y = int(y) if isinstance(y, (int, float)) else 1
             try:
                 canvas = self.wait.until(EC.presence_of_element_located(self.CANVAS))
                 self.driver.execute_script("arguments[0].scrollIntoView({block:'center', inline:'center'});", canvas)
 
                 rect = self.driver.execute_script(
                     "const r = arguments[0].getBoundingClientRect();"
-                    "return {w: Math.floor(r.width), h: Math.floor(r.height)};",
+                    "return {left: r.left, top: r.top, w: Math.floor(r.width), h: Math.floor(r.height)};",
                     canvas
                 )
 
                 width = max(int(rect.get("w", 0)), 1)
                 height = max(int(rect.get("h", 0)), 1)
+                left = float(rect.get("left", 0.0))
+                top = float(rect.get("top", 0.0))
 
                 if coord_space == "canvas":
                     local_x = int(round(float(x)))
@@ -126,35 +157,41 @@ class BasePage:
                 local_x = max(1, min(local_x, width - 2 if width > 2 else 1))
                 local_y = max(1, min(local_y, height - 2 if height > 2 else 1))
 
-                # Native Selenium click registers better in headless canvas flows.
-                # We move to canvas center first, then apply relative offset.
-                offset_x = local_x - (width // 2)
-                offset_y = local_y - (height // 2)
+                abs_x = int(round(left + local_x))
+                abs_y = int(round(top + local_y))
 
-                actions = ActionChains(self.driver)
-                actions.move_to_element(canvas)
-                actions.move_by_offset(offset_x, offset_y)
-                actions.pause(0.05)
-                actions.click()
-                actions.perform()
+                # Primary strategy: CDP click in viewport coordinates.
+                self._dispatch_cdp_click(abs_x, abs_y)
 
                 if text:
-                    # Type into whichever field is focused by the canvas click.
-                    ActionChains(self.driver).pause(0.05).perform()
-                    ActionChains(self.driver) \
-                        .key_down(Keys.CONTROL) \
-                        .send_keys("a") \
-                        .key_up(Keys.CONTROL) \
-                        .send_keys(Keys.BACKSPACE) \
-                        .send_keys(str(text)) \
-                        .perform()
+                    self._type_focused_text(text)
 
                 time.sleep(wait_after)
                 return
             except Exception as exc:
                 last_error = exc
                 try:
-                    # Fallback to JS event dispatch if native pointer action fails.
+                    # Fallback 1: Selenium action click by offset from canvas center.
+                    canvas = self.wait.until(EC.presence_of_element_located(self.CANVAS))
+                    offset_x = local_x - (width // 2)
+                    offset_y = local_y - (height // 2)
+                    actions = ActionChains(self.driver)
+                    actions.move_to_element(canvas)
+                    actions.move_by_offset(offset_x, offset_y)
+                    actions.pause(0.05)
+                    actions.click()
+                    actions.perform()
+
+                    if text:
+                        self._type_focused_text(text)
+
+                    time.sleep(wait_after)
+                    return
+                except Exception:
+                    pass
+
+                try:
+                    # Fallback 2: JS event dispatch (pointer + mouse).
                     canvas = self.wait.until(EC.presence_of_element_located(self.CANVAS))
                     self.driver.execute_script(
                         """
@@ -165,10 +202,25 @@ class BasePage:
                         const clientX = rect.left + x;
                         const clientY = rect.top + y;
 
-                        function fire(type) {
+                        function firePointer(type) {
+                          const evt = new PointerEvent(type, {
+                            bubbles: true,
+                            cancelable: true,
+                            composed: true,
+                            pointerType: 'mouse',
+                            isPrimary: true,
+                            button: 0,
+                            clientX: clientX,
+                            clientY: clientY
+                          });
+                          canvas.dispatchEvent(evt);
+                        }
+
+                        function fireMouse(type) {
                           const evt = new MouseEvent(type, {
                             bubbles: true,
                             cancelable: true,
+                            composed: true,
                             view: window,
                             clientX: clientX,
                             clientY: clientY
@@ -176,22 +228,19 @@ class BasePage:
                           canvas.dispatchEvent(evt);
                         }
 
-                        fire('mousemove');
-                        fire('mousedown');
-                        fire('mouseup');
-                        fire('click');
+                        firePointer('pointermove');
+                        firePointer('pointerdown');
+                        firePointer('pointerup');
+                        firePointer('click');
+                        fireMouse('mousemove');
+                        fireMouse('mousedown');
+                        fireMouse('mouseup');
+                        fireMouse('click');
                         """,
                         canvas, int(local_x), int(local_y)
                     )
                     if text:
-                        ActionChains(self.driver).pause(0.05).perform()
-                        ActionChains(self.driver) \
-                            .key_down(Keys.CONTROL) \
-                            .send_keys("a") \
-                            .key_up(Keys.CONTROL) \
-                            .send_keys(Keys.BACKSPACE) \
-                            .send_keys(str(text)) \
-                            .perform()
+                        self._type_focused_text(text)
                     time.sleep(wait_after)
                     return
                 except Exception:

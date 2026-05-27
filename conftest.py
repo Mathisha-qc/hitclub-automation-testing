@@ -96,6 +96,17 @@ def driver():
 
     # 3. Explicitly enable Network domain for CDP events
     driver.execute_cdp_cmd("Network.enable", {})
+    # Lock viewport metrics so canvas coordinates stay stable in headless CI.
+    driver.set_window_size(1920, 1080)
+    driver.execute_cdp_cmd(
+        "Emulation.setDeviceMetricsOverride",
+        {
+            "width": 1920,
+            "height": 1080,
+            "deviceScaleFactor": 1,
+            "mobile": False
+        }
+    )
     log_runtime("CDP Network logging enabled.")
     
     # 4. Provide the driver to the test
