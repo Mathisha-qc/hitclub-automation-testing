@@ -58,8 +58,23 @@ def login_and_clear_popups(driver, username=None, password=None, captcha=None):
         "username successfully"
         )
         login_pg.enter_pass(password)
+        login_pg.step(
+        "password",
+        "PASSED",
+        "password successfully"
+        )
         login_pg.enter_cap(captcha)
+        login_pg.step(
+        "captcha",
+        "PASSED",
+        "captcha successfully"
+        )
         login_pg.click_final_submit()
+        login_pg.step(
+        "click_final_submit",
+        "PASSED",
+        "click_final_submit successfully"
+        )
 
     time.sleep(20)
     with allure.step("Fetch Wallet (CMD 100)"):
