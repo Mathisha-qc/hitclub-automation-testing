@@ -30,7 +30,8 @@ class PopupHandler(BasePage):
         """Handles the Main UI Popup (Popup 2)"""
         print("[INFO] Handling UI popup...")
         if self._wait_for_image_on_screen("main_ui_popup.png", timeout=5):
-            self._interact_canvas(x=1246, y=308, wait_after=10)
+            # Same style as login flow: direct fixed-coordinate click.
+            self._interact_canvas(x=1246, y=348, wait_after=2.0)
             print("Main UI popup cleared")
         else:
             print("Main UI popup NOT present")
