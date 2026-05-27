@@ -56,7 +56,7 @@ class XocDiaGamePage(BasePage):
 
         success = self._wait_and_click_image(
             image_filename="xoc_dia_icon.png", 
-            timeout=5.0, 
+            timeout=20, 
             wait_after=5.0
         )
         
@@ -80,7 +80,7 @@ class XocDiaGamePage(BasePage):
 
         self.ws._wait_for_cmd(
             XOCDIA_LIVE_CMD["SUBSCRIBE"],
-            timeout=5,
+            timeout=10,
             expected_direction="send"
         )
         print("Subscribed")
@@ -90,7 +90,7 @@ class XocDiaGamePage(BasePage):
 
         self.ws._wait_for_cmd(
             XOCDIA_LIVE_CMD["JOIN_ROOM"],
-            timeout=5,
+            timeout=10,
             expected_direction="send"
         )
         print("JOIN ROOM")
