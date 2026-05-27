@@ -116,7 +116,7 @@ class GenericSlotGamePage(BasePage):
             result = self._find_image_on_screen()
             if result:
                 cx, cy, conf = result
-                self._interact_canvas(x=cx, y=cy, wait_after=2)
+                self._interact_canvas(x=cx, y=cy, wait_after=2, coord_space="canvas")
                 self.log_step("Open Game", "PASSED", f"{self.game_name} image clicked ({cx},{cy}) conf={conf:.2f}")
                 return True
 

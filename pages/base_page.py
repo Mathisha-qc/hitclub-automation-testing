@@ -9,11 +9,14 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.action_chains import ActionChains
+from selenium.webdriver.common.keys import Keys
 
 from reports.custom_report import report , ReportStep
 
 
 class BasePage:
+    COORD_REF_WIDTH = 1920
+    COORD_REF_HEIGHT = 1080
 
     def __init__(self, driver):
         self.driver = driver
@@ -93,7 +96,7 @@ class BasePage:
         
     
     # CANVAS INTERACTION 
-    def _interact_canvas(self, x, y, text=None, wait_after=1.0, retries=3):
+    def _interact_canvas(self, x, y, text=None, wait_after=1.0, retries=3, coord_space="reference"):
         # Wait for page + canvas first, then perform native pointer actions.
         self.wait.until(lambda d: d.execute_script("return document.readyState") in ("interactive", "complete"))
         last_error = None
@@ -111,8 +114,17 @@ class BasePage:
 
                 width = max(int(rect.get("w", 0)), 1)
                 height = max(int(rect.get("h", 0)), 1)
-                local_x = max(1, min(int(x), width - 2 if width > 2 else 1))
-                local_y = max(1, min(int(y), height - 2 if height > 2 else 1))
+
+                if coord_space == "canvas":
+                    local_x = int(round(float(x)))
+                    local_y = int(round(float(y)))
+                else:
+                    # Most page coordinates are defined for a 1920x1080 reference canvas.
+                    local_x = int(round((float(x) / self.COORD_REF_WIDTH) * width))
+                    local_y = int(round((float(y) / self.COORD_REF_HEIGHT) * height))
+
+                local_x = max(1, min(local_x, width - 2 if width > 2 else 1))
+                local_y = max(1, min(local_y, height - 2 if height > 2 else 1))
 
                 # Native Selenium click registers better in headless canvas flows.
                 # We move to canvas center first, then apply relative offset.
@@ -127,8 +139,15 @@ class BasePage:
                 actions.perform()
 
                 if text:
-                    # Type into whichever input got focus after canvas click.
-                    ActionChains(self.driver).send_keys(text).perform()
+                    # Type into whichever field is focused by the canvas click.
+                    ActionChains(self.driver).pause(0.05).perform()
+                    ActionChains(self.driver) \
+                        .key_down(Keys.CONTROL) \
+                        .send_keys("a") \
+                        .key_up(Keys.CONTROL) \
+                        .send_keys(Keys.BACKSPACE) \
+                        .send_keys(str(text)) \
+                        .perform()
 
                 time.sleep(wait_after)
                 return
@@ -162,10 +181,17 @@ class BasePage:
                         fire('mouseup');
                         fire('click');
                         """,
-                        canvas, int(x), int(y)
+                        canvas, int(local_x), int(local_y)
                     )
                     if text:
-                        ActionChains(self.driver).send_keys(text).perform()
+                        ActionChains(self.driver).pause(0.05).perform()
+                        ActionChains(self.driver) \
+                            .key_down(Keys.CONTROL) \
+                            .send_keys("a") \
+                            .key_up(Keys.CONTROL) \
+                            .send_keys(Keys.BACKSPACE) \
+                            .send_keys(str(text)) \
+                            .perform()
                     time.sleep(wait_after)
                     return
                 except Exception:
@@ -220,7 +246,7 @@ class BasePage:
             coords = self._find_image_coordinates(image_filename, confidence)
             if coords:
                 print(f"[SUCCESS] Found {image_filename} at X:{coords[0]}, Y:{coords[1]}. Clicking now.")
-                self._interact_canvas(x=coords[0], y=coords[1], wait_after=wait_after)
+                self._interact_canvas(x=coords[0], y=coords[1], wait_after=wait_after, coord_space="canvas")
                 return True
             time.sleep(0.5)
             
