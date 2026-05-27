@@ -344,3 +344,4 @@ class BasePage:
                 return True
             time.sleep(0.2)
         return False
+
