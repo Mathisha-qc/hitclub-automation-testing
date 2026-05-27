@@ -113,8 +113,14 @@ def driver():
     yield driver
     
     # 5. Teardown
-    # We print the info but DO NOT call driver.quit() or driver.close()
-    log_runtime("Session finished. Browser remains open by design.")
+    if is_ci:
+        try:
+            driver.quit()
+            log_runtime("Session finished. Browser closed for CI.")
+        except Exception as e:
+            log_runtime(f"[WARN] Browser close failed: {e}")
+    else:
+        log_runtime("Session finished. Browser remains open by design.")
     log_runtime(f"Profile Path: {temp_profile}")
 
 
@@ -254,15 +260,15 @@ def pytest_sessionfinish(session, exitstatus):
             output_dir.rename(latest_dir)
             log_runtime("Temporary report folder moved to 'latest_run'.")
         
-        # 3. OPEN THE LOCAL HTML FILE IN CHROME
-        import webbrowser
-        final_html_path = latest_dir / "custom_report.html"
-        chrome_path = "C:/Program Files/Google/Chrome/Application/chrome.exe %s"
-        webbrowser.get(chrome_path).open(final_html_path.resolve().as_uri())
-        log_runtime(f"HTML report opened: {final_html_path.resolve()}")
+        # 3. OPEN LOCAL HTML ONLY FOR NON-CI RUNS
+        if os.getenv("CI", "").lower() != "true":
+            import webbrowser
+            final_html_path = latest_dir / "custom_report.html"
+            chrome_path = "C:/Program Files/Google/Chrome/Application/chrome.exe %s"
+            webbrowser.get(chrome_path).open(final_html_path.resolve().as_uri())
+            log_runtime(f"HTML report opened: {final_html_path.resolve()}")
 
     except Exception as e:
         log_runtime(f"[ERROR] Session finish failed: {e}")
 
     
-
