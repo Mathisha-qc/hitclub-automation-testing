@@ -8,7 +8,6 @@ on:
 jobs:
   nightly:
     runs-on: self-hosted
-    environment: production
     timeout-minutes: 60
     env:
       PYTHON_EXE: C:\Program Files\Python311\python.exe
@@ -52,7 +51,7 @@ jobs:
           TEST_PASSWORD: ${{ secrets.TEST_PASSWORD }}
           TEST_CAPTCHA: ${{ secrets.TEST_CAPTCHA }}
           BASE_URL: ${{ secrets.BASE_URL }}
-          FORCE_VISIBLE_BROWSER: ${{ vars.FORCE_VISIBLE_BROWSER }}
+          FORCE_VISIBLE_BROWSER: "false"
         run: |
           if not exist results mkdir results
           set TEST_FAILED=0

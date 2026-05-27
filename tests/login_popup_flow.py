@@ -28,12 +28,9 @@ def login_and_clear_popups(driver, username=None, password=None, captcha=None):
         WebDriverWait(driver, 60).until(
             EC.presence_of_element_located((By.TAG_NAME, "canvas"))
         )
-
-        time.sleep(30)
-
-        driver.refresh()
-
-        time.sleep(20)
+        WebDriverWait(driver, 30).until(
+            lambda d: d.execute_script("return document.readyState") in ("interactive", "complete")
+        )
 
         print("[INFO] Landing Page Loaded")
 
@@ -44,24 +41,42 @@ def login_and_clear_popups(driver, username=None, password=None, captcha=None):
         )
 
     with allure.step("Input Credentials"):
-        login_pg.click_login_menu()
-        time.sleep(2)
-        login_pg.step(
-        "click_login_menu",
-        "PASSED",
-        "login menu clicled successfully"
-        )
-        login_pg.enter_user(username)
-        login_pg.step(
-        "username",
-        "PASSED",
-        "username successfully"
-        )
-        login_pg.enter_pass(password)
-        login_pg.enter_cap(captcha)
-        login_pg.click_final_submit()
+        login_success = False
+        last_exc = None
+        for attempt in range(2):
+            try:
+                login_pg.click_login_menu()
+                time.sleep(1)
+                login_pg.step(
+                    "click_login_menu",
+                    "PASSED",
+                    "Login menu clicked successfully"
+                )
+                login_pg.enter_user(username)
+                login_pg.step(
+                    "username",
+                    "PASSED",
+                    "Username entered successfully"
+                )
+                login_pg.enter_pass(password)
+                login_pg.enter_cap(captcha)
+                login_pg.click_final_submit()
+                login_success = True
+                break
+            except Exception as exc:
+                last_exc = exc
+                print(f"[WARN] Login attempt {attempt + 1} failed: {exc}")
+                if attempt == 0:
+                    driver.refresh()
+                    WebDriverWait(driver, 30).until(
+                        EC.presence_of_element_located((By.TAG_NAME, "canvas"))
+                    )
+                else:
+                    raise
 
-    time.sleep(20)
+        if not login_success and last_exc:
+            raise last_exc
+
     with allure.step("Fetch Wallet (CMD 100)"):
         ev = ws._wait_for_cmd(WS_CMD["USER_INFO"], timeout=30)
 
@@ -88,7 +103,6 @@ def login_and_clear_popups(driver, username=None, password=None, captcha=None):
         print(f"[INFO] Wallet before: {wallet_before}")
 
 
-    time.sleep(20)
     with allure.step("Clear Lobby Popups"):
         popup = PopupHandler(driver)
        

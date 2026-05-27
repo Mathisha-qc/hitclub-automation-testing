@@ -5,6 +5,7 @@ import os
 import cv2
 import numpy as np
 
+from selenium.webdriver import ActionChains
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
@@ -93,7 +94,7 @@ class BasePage:
     
     # CANVAS INTERACTION 
     def _interact_canvas(self, x, y, text=None, wait_after=1.0, retries=3):
-        # Headless-safe interaction: wait for page + canvas readiness, then retry dispatch.
+        # Headless-safe interaction: wait for page + canvas readiness, then retry.
         self.wait.until(lambda d: d.execute_script("return document.readyState") in ("interactive", "complete"))
         last_error = None
 
@@ -101,37 +102,72 @@ class BasePage:
             try:
                 canvas = self.wait.until(EC.presence_of_element_located(self.CANVAS))
                 self.driver.execute_script("arguments[0].scrollIntoView({block:'center', inline:'center'});", canvas)
+                rect = self.driver.execute_script(
+                    """
+                    const r = arguments[0].getBoundingClientRect();
+                    return {left: r.left, top: r.top, width: r.width, height: r.height};
+                    """,
+                    canvas,
+                )
 
+                # Support both coordinate styles:
+                # - Canvas-relative (0..canvas width/height)
+                # - Viewport absolute (recorded from full-page screenshots)
+                if 0 <= x <= rect["width"] and 0 <= y <= rect["height"]:
+                    click_x = rect["left"] + x
+                    click_y = rect["top"] + y
+                else:
+                    click_x = x
+                    click_y = y
+
+                offset_x = int(click_x - rect["left"])
+                offset_y = int(click_y - rect["top"])
+
+                # First try native pointer events (more reliable in headless).
+                ActionChains(self.driver).move_to_element_with_offset(canvas, offset_x, offset_y).click().perform()
+
+                # Fallback: explicitly dispatch canvas events used by game engines.
                 self.driver.execute_script(
                     """
                     const canvas = arguments[0];
-                    const x = arguments[1];
-                    const y = arguments[2];
+                    const clientX = arguments[1];
+                    const clientY = arguments[2];
 
                     function fire(type) {
-                      const rect = canvas.getBoundingClientRect();
-                      const evt = new MouseEvent(type, {
+                      const common = {
                         bubbles: true,
                         cancelable: true,
                         view: window,
-                        clientX: rect.left + x,
-                        clientY: rect.top + y
-                      });
+                        clientX: clientX,
+                        clientY: clientY
+                      };
+                      let evt;
+                      if (type.startsWith('pointer')) {
+                        evt = new PointerEvent(type, common);
+                      } else {
+                        evt = new MouseEvent(type, common);
+                      }
                       canvas.dispatchEvent(evt);
                     }
 
+                    fire('pointermove');
                     fire('mousemove');
+                    fire('pointerdown');
                     fire('mousedown');
+                    fire('pointerup');
                     fire('mouseup');
                     fire('click');
                     """,
-                    canvas, x, y
+                    canvas, int(click_x), int(click_y),
                 )
 
                 if text:
                     self.driver.execute_script("document.activeElement && document.activeElement.focus();")
                     active = self.driver.switch_to.active_element
-                    active.clear()
+                    try:
+                        active.clear()
+                    except Exception:
+                        pass
                     active.send_keys(text)
 
                 time.sleep(wait_after)
