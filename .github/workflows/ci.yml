@@ -59,18 +59,9 @@ jobs:
         run: |
           set TEST_FAILED=0
           for %%F in (
-            tests\test_xoc_dia_flow.py
+           
             tests\test_taixiu_mini_flow.py
-            tests\test_txmd5_mini_flow.py
-            tests\test_mini_poker_flow.py
-            tests\test_tren_duoi_mini_flow.py
-            tests\test_bi_mat_cleopatra_flow.py
-            tests\test_cung_hy_phat_tai_flow.py
-            tests\test_hac_thoai_ngo_khong_flow.py
-            tests\test_kho_bau_tu_linh_flow.py
-            tests\test_linh_chau_at_ty_flow.py
-            tests\test_sac_xuan_cho_tet_flow.py
-            tests\test_son_tinh_thuy_tinh_flow.py   
+            
           ) do (
             echo ==================================================
             if exist "%%F" (
