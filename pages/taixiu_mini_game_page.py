@@ -20,7 +20,7 @@ class TaiXiuMiniGamePage(BasePage):
     PLACE_BET = (700, 826)
 
     CHAT_BOX = (1439, 831)
-    CHAT_SEND = (1701, 802)
+    CHAT_SEND = (1748, 856)
 
     EXIT_GAME = (1059, 265)
 
@@ -43,7 +43,7 @@ class TaiXiuMiniGamePage(BasePage):
 
         success = self._wait_and_click_image(
             image_filename="tai_xiu_icon.png", 
-            timeout=5.0, 
+            timeout=20, 
             wait_after=5.0
         )
         
