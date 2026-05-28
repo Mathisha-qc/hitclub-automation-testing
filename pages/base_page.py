@@ -22,10 +22,71 @@ class BasePage:
         self.driver = driver
         self.wait = WebDriverWait(self.driver, 20)
         self.CANVAS = (By.TAG_NAME, "canvas")
+        if not hasattr(self.driver, "_invitation_306_received"):
+            self.driver._invitation_306_received = False
 
         # Setup absolute path for screenshots to be used by ALL child pages
         self.base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         self.assets_dir = os.path.join(self.base_dir, "assets")
+
+    def _read_screen_image(self):
+        screenshot_bytes = self.driver.get_screenshot_as_png()
+        nparr = np.frombuffer(screenshot_bytes, np.uint8)
+        return cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+
+    def _best_template_match(self, screen_img, template, scales=(1.0, 0.98, 1.02)):
+        """
+        Returns best match score/location across small scale shifts and color/gray matching.
+        """
+        best_score = -1.0
+        best_loc = None
+        best_size = None
+
+        if screen_img is None or template is None:
+            return best_score, best_loc, best_size
+
+        try:
+            sh, sw = screen_img.shape[:2]
+            screen_gray = cv2.cvtColor(screen_img, cv2.COLOR_BGR2GRAY)
+        except Exception:
+            return best_score, best_loc, best_size
+
+        for scale in scales:
+            try:
+                if scale == 1.0:
+                    tpl = template
+                else:
+                    base_h, base_w = template.shape[:2]
+                    new_w = max(1, int(round(base_w * scale)))
+                    new_h = max(1, int(round(base_h * scale)))
+                    tpl = cv2.resize(template, (new_w, new_h), interpolation=cv2.INTER_AREA)
+
+                th, tw = tpl.shape[:2]
+                if th <= 0 or tw <= 0 or th > sh or tw > sw:
+                    continue
+
+                # Color match
+                res_color = cv2.matchTemplate(screen_img, tpl, cv2.TM_CCOEFF_NORMED)
+                _, max_color, _, max_loc_color = cv2.minMaxLoc(res_color)
+                if max_color > best_score:
+                    best_score = float(max_color)
+                    best_loc = max_loc_color
+                    best_size = (tw, th)
+
+                # Gray match (more stable for brightness/theme shifts)
+                tpl_gray = cv2.cvtColor(tpl, cv2.COLOR_BGR2GRAY)
+                res_gray = cv2.matchTemplate(screen_gray, tpl_gray, cv2.TM_CCOEFF_NORMED)
+                _, max_gray, _, max_loc_gray = cv2.minMaxLoc(res_gray)
+                if max_gray > best_score:
+                    best_score = float(max_gray)
+                    best_loc = max_loc_gray
+                    best_size = (tw, th)
+            except cv2.error:
+                continue
+            except Exception:
+                continue
+
+        return best_score, best_loc, best_size
 
     # AUTO STEP + SCREENSHOT SYSTEM (CORE FEATURE)
     def step(self, name, status="PASSED", message="", extra=None, take_screenshot=True):
@@ -111,6 +172,57 @@ class BasePage:
             {"type": "mouseReleased", "x": int(abs_x), "y": int(abs_y), "button": "left", "clickCount": 1}
         )
 
+    def _is_template_present_no_log(self, image_filename, confidence=0.72):
+        template_path = os.path.join(self.assets_dir, image_filename)
+        screen_img = self._read_screen_image()
+        template = cv2.imread(template_path, cv2.IMREAD_COLOR)
+        if template is None or screen_img is None:
+            return False
+        max_val, _, _ = self._best_template_match(screen_img, template)
+        return max_val >= confidence
+
+    def _click_reference_point_direct(self, ref_x, ref_y, wait_after=0.5):
+        canvas = self.wait.until(EC.presence_of_element_located(self.CANVAS))
+        rect = self.driver.execute_script(
+            "const r = arguments[0].getBoundingClientRect();"
+            "return {left: r.left, top: r.top, w: Math.floor(r.width), h: Math.floor(r.height)};",
+            canvas
+        )
+        width = max(int(rect.get("w", 0)), 1)
+        height = max(int(rect.get("h", 0)), 1)
+        left = float(rect.get("left", 0.0))
+        top = float(rect.get("top", 0.0))
+
+        local_x = int(round((float(ref_x) / self.COORD_REF_WIDTH) * width))
+        local_y = int(round((float(ref_y) / self.COORD_REF_HEIGHT) * height))
+        local_x = max(1, min(local_x, width - 2 if width > 2 else 1))
+        local_y = max(1, min(local_y, height - 2 if height > 2 else 1))
+
+        abs_x = int(round(left + local_x))
+        abs_y = int(round(top + local_y))
+        self._dispatch_cdp_click(abs_x, abs_y)
+        if wait_after:
+            time.sleep(wait_after)
+
+    def _dismiss_invitation_popup_if_present(self, confidence=0.72):
+        if self.driver._invitation_306_received:
+            return False
+
+        try:
+            if not self._is_template_present_no_log("invitation_popup.png", confidence=confidence):
+                return False
+
+            print("[INFO] Invitation popup detected during action. Auto-handling...")
+            for idx, (px, py) in enumerate(((812, 671), (840, 671), (780, 671)), start=1):
+                self._click_reference_point_direct(px, py, wait_after=0.6)
+                if not self._is_template_present_no_log("invitation_popup.png", confidence=confidence):
+                    print(f"[INFO] Invitation close attempt {idx}: cleared")
+                    return True
+                print(f"[INFO] Invitation close attempt {idx}: still visible")
+            return True
+        except Exception:
+            return False
+
     def _type_focused_text(self, text):
         ActionChains(self.driver).pause(0.05).perform()
         ActionChains(self.driver) \
@@ -132,6 +244,8 @@ class BasePage:
             local_x = int(x) if isinstance(x, (int, float)) else 1
             local_y = int(y) if isinstance(y, (int, float)) else 1
             try:
+                self._dismiss_invitation_popup_if_present()
+
                 canvas = self.wait.until(EC.presence_of_element_located(self.CANVAS))
                 self.driver.execute_script("arguments[0].scrollIntoView({block:'center', inline:'center'});", canvas)
 
@@ -162,6 +276,9 @@ class BasePage:
 
                 # Primary strategy: CDP click in viewport coordinates.
                 self._dispatch_cdp_click(abs_x, abs_y)
+
+                if self._dismiss_invitation_popup_if_present():
+                    continue
 
                 if text:
                     self._type_focused_text(text)
@@ -258,9 +375,7 @@ class BasePage:
         template_path = os.path.join(self.assets_dir, image_filename)
         
         try:
-            screenshot_bytes = self.driver.get_screenshot_as_png()
-            nparr = np.frombuffer(screenshot_bytes, np.uint8)
-            screen_img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+            screen_img = self._read_screen_image()
             
             template = cv2.imread(template_path, cv2.IMREAD_COLOR)
             
@@ -268,14 +383,15 @@ class BasePage:
                 print(f"[ERROR] Could not load template: {template_path}")
                 return None
 
-            result = cv2.matchTemplate(screen_img, template, cv2.TM_CCOEFF_NORMED)
-            _, max_val, _, max_loc = cv2.minMaxLoc(result)
+            max_val, max_loc, best_size = self._best_template_match(screen_img, template)
             
             if max_val >= confidence:
                 # max_loc gives the top-left corner. We calculate the exact center.
-                template_height, template_width = template.shape[:2]
-                center_x = max_loc[0] + (template_width // 2)
-                center_y = max_loc[1] + (template_height // 2)
+                if not best_size:
+                    return None
+                template_width, template_height = best_size
+                center_x = int(max_loc[0] + (template_width // 2))
+                center_y = int(max_loc[1] + (template_height // 2))
                 
                 return (center_x, center_y)
             return None
@@ -293,6 +409,9 @@ class BasePage:
         
         while time.time() - start_time < timeout:
             coords = self._find_image_coordinates(image_filename, confidence)
+            if not coords and confidence > 0.68:
+                # Small fallback for dynamic/animated UI states.
+                coords = self._find_image_coordinates(image_filename, max(0.68, confidence - 0.10))
             if coords:
                 print(f"[SUCCESS] Found {image_filename} at X:{coords[0]}, Y:{coords[1]}. Clicking now.")
                 self._interact_canvas(x=coords[0], y=coords[1], wait_after=wait_after, coord_space="canvas")
@@ -308,12 +427,8 @@ class BasePage:
     def _is_image_on_screen(self, image_filename, confidence=0.8):
         template_path = os.path.join(self.assets_dir, image_filename)
         try:
-            # 1. Take screenshot directly from the browser's internal engine (works even if hidden/minimized!)
-            screenshot_bytes = self.driver.get_screenshot_as_png()
-            
-            # 2. Convert the binary image data into a numpy array for OpenCV
-            nparr = np.frombuffer(screenshot_bytes, np.uint8)
-            screen_img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+            # 1. Take screenshot directly from browser engine (works when hidden/minimized)
+            screen_img = self._read_screen_image()
             
             # ---> DEBUG TOOL 1: Save what the bot sees <---
             # This saves an image to your root folder so you can verify it's looking at the game
@@ -325,8 +440,7 @@ class BasePage:
                 print(f"[ERROR] Could not load image template at {template_path}")
                 return False
 
-            result = cv2.matchTemplate(screen_img, template, cv2.TM_CCOEFF_NORMED)
-            _, max_val, _, _ = cv2.minMaxLoc(result)
+            max_val, _, _ = self._best_template_match(screen_img, template)
             
             # ---> DEBUG TOOL 2: Print the confidence score <---
             print(f"[DEBUG] {image_filename} match score: {max_val:.2f} (Needs {confidence})")
@@ -344,4 +458,3 @@ class BasePage:
                 return True
             time.sleep(0.2)
         return False
-

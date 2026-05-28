@@ -12,6 +12,8 @@ class PopupHandler(BasePage):
     def __init__(self, driver):
         super().__init__(driver)
         self.ws = WSEngine(driver, self.log_step)
+        if not hasattr(self.driver, "_invitation_306_received"):
+            self.driver._invitation_306_received = False
         
     # ==========================================
     # Individual Popup Handlers
@@ -45,6 +47,22 @@ class PopupHandler(BasePage):
         handled_305 = False
         received_306 = False
         safe_to_click = False
+
+        # Rule: if 306 already exists once, skip future invitation checks/clicks.
+        if self.driver._invitation_306_received:
+            print("[INFO] 306 already received earlier. Skipping invitation handling.")
+            return handled_305, True
+
+        # Check recent websocket buffer first (handles case where 306 came before this method call).
+        try:
+            self.ws._drain_ws_events()
+            for ev in reversed(self.ws._ws_buffer):
+                if str(ev.get("cmd")) == str(WS_CMD["INVITATION_CONFIRM"]):
+                    self.driver._invitation_306_received = True
+                    print("[INFO] 306 already present in WS logs. Skipping invitation handling.")
+                    return handled_305, True
+        except Exception:
+            pass
 
         # --- STEP 1: Check Network (WebSocket) ---
         try:
@@ -89,10 +107,11 @@ class PopupHandler(BasePage):
                     WS_CMD["INVITATION_CONFIRM"],
                     timeout=5,
                     from_cursor=True,
-                    expected_direction="send"
+                    expected_direction=None
                 )
                 if ev_306:
                     received_306 = True
+                    self.driver._invitation_306_received = True
                     print("[SUCCESS] CMD 306 received")
             except AssertionError:
                 print("[WARN] 306 not received")
