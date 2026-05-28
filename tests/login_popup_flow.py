@@ -76,7 +76,7 @@ def login_and_clear_popups(driver, username=None, password=None, captcha=None):
         "click_final_submit successfully"
         )
 
-    time.sleep(20)
+    time.sleep(30)
     with allure.step("Fetch Wallet (CMD 100)"):
         ev = ws._wait_for_cmd(WS_CMD["USER_INFO"], timeout=30)
 
@@ -103,7 +103,7 @@ def login_and_clear_popups(driver, username=None, password=None, captcha=None):
         print(f"[INFO] Wallet before: {wallet_before}")
 
 
-    time.sleep(20)
+    time.sleep(30)
     with allure.step("Clear Lobby Popups"):
         popup = PopupHandler(driver)
        
