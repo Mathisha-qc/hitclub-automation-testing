@@ -44,7 +44,7 @@ class TaiXiuMiniGamePage(BasePage):
         success = self._wait_and_click_image(
             image_filename="tai_xiu_icon.png", 
             timeout=20, 
-            wait_after=5.0
+            wait_after=10
         )
         
         if success:
@@ -199,7 +199,7 @@ class TaiXiuMiniGamePage(BasePage):
 
             final_ev = self.ws._wait_for_cmd(
                 WS_CMD["WALLET_UPDATE"],
-                timeout=10,
+                timeout=30,
                 from_cursor=True
             )
 
