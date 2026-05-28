@@ -20,8 +20,8 @@ class XocDiaGamePage(BasePage):
     BET_CHAN = (668, 506)
     BET_LE = (1268, 523)
 
-    CHAT_BOX = (1559, 583)
-    CHAT_SEND = (1804, 578)
+    CHAT_BOX = (1466, 862)
+    CHAT_SEND = (1748, 856)
 
     BACK_BTN = (77, 214)
     EXIT_BTN = (187, 330)
@@ -248,7 +248,7 @@ class XocDiaGamePage(BasePage):
         self._interact_canvas(
             x=self.CHAT_BOX[0],
             y=self.CHAT_BOX[1],
-            wait_after=4.0
+            wait_after=1.0
         )
 
         chat_input = self.driver.switch_to.active_element

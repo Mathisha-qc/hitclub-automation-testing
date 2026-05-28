@@ -157,8 +157,9 @@ class WSEngine:
                      self.step(
                               f"{cmd_name} ({target})",
                               "PASSED",
-                              "WebSocket command {ev.get('direction')}d",
-                               extra={"cmd": target, "payload": ev}   
+                               "WebSocket command {ev.get('direction')}d",
+                               extra={"cmd": target, "payload": ev},
+                               take_screenshot=False
                         )
                     return ev
                 time.sleep(0.3)
@@ -175,7 +176,8 @@ class WSEngine:
                  f"{cmd_name} ({target})",
                 "FAILED",
                 "Not found",
-                extra={"cmd": target}
+                extra={"cmd": target},
+                take_screenshot=False
              )
 
             assert False, f"[FAIL] WS cmd {target} not found within {timeout}s"
