@@ -100,7 +100,12 @@ class PopupHandler(BasePage):
         if safe_to_click:
             handled_305 = True
             print("[INFO] clicking invitation...")
-            self._interact_canvas(x=812, y=671, wait_after=2)
+            self._interact_canvas(
+                x=812,
+                y=671,
+                wait_after=2,
+                suppress_invitation_handling=True
+            )
 
             try:
                 ev_306 = self.ws._wait_for_cmd(

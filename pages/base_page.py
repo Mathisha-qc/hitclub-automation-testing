@@ -233,7 +233,7 @@ class BasePage:
             .send_keys(str(text)) \
             .perform()
 
-    def _interact_canvas(self, x, y, text=None, wait_after=1.0, retries=3, coord_space="reference"):
+    def _interact_canvas(self, x, y, text=None, wait_after=1.0, retries=3, coord_space="reference", suppress_invitation_handling=False):
         # Wait for page + canvas first, then perform native pointer actions.
         self.wait.until(lambda d: d.execute_script("return document.readyState") in ("interactive", "complete"))
         last_error = None
@@ -244,7 +244,8 @@ class BasePage:
             local_x = int(x) if isinstance(x, (int, float)) else 1
             local_y = int(y) if isinstance(y, (int, float)) else 1
             try:
-                self._dismiss_invitation_popup_if_present()
+                if not suppress_invitation_handling:
+                    self._dismiss_invitation_popup_if_present()
 
                 canvas = self.wait.until(EC.presence_of_element_located(self.CANVAS))
                 self.driver.execute_script("arguments[0].scrollIntoView({block:'center', inline:'center'});", canvas)
@@ -277,7 +278,7 @@ class BasePage:
                 # Primary strategy: CDP click in viewport coordinates.
                 self._dispatch_cdp_click(abs_x, abs_y)
 
-                if self._dismiss_invitation_popup_if_present():
+                if (not suppress_invitation_handling) and self._dismiss_invitation_popup_if_present():
                     continue
 
                 if text:
