@@ -188,7 +188,7 @@ class TaiXiuMiniGamePage(BasePage):
 
         self.ws._wait_for_cmd(
             TAIXIU_MINI_CMD["SHOW_RESULT"],
-            timeout=60,
+            timeout=40,
             from_cursor=True
         )
         print("Show result")
@@ -200,7 +200,7 @@ class TaiXiuMiniGamePage(BasePage):
 
             final_ev = self.ws._wait_for_cmd(
                 WS_CMD["WALLET_UPDATE"],
-                timeout=30,
+                timeout=10,
                 from_cursor=True
             )
 
