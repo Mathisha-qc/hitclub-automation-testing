@@ -44,7 +44,7 @@ class TaiXiuMiniGamePage(BasePage):
         success = self._wait_and_click_image(
             image_filename="tai_xiu_icon.png", 
             timeout=20, 
-            wait_after=10
+            wait_after=15
         )
         
         if success:
@@ -69,7 +69,7 @@ class TaiXiuMiniGamePage(BasePage):
 
         self.ws._wait_for_cmd(
             TAIXIU_MINI_CMD["SUBSCRIBE_INFO"],
-            timeout=5,
+            timeout=15,
             expected_direction="send"
         )
         print("Subscribed")
