@@ -4,6 +4,9 @@ import time
 import allure
 from pathlib import Path
 
+import cv2
+import numpy as np
+
 from reports.custom_report import get_cmd_name, report
 
 class WSEngine:
@@ -13,6 +16,130 @@ class WSEngine:
         self.step = step_func
         self._ws_buffer = []
         self._cursor = 0
+
+    def _read_screen_image(self):
+        screenshot_bytes = self.driver.get_screenshot_as_png()
+        nparr = np.frombuffer(screenshot_bytes, np.uint8)
+        return cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+
+    def _best_template_match(self, screen_img, template, scales=(1.0, 0.98, 1.02)):
+        best_score = -1.0
+        best_loc = None
+        best_size = None
+
+        if screen_img is None or template is None:
+            return best_score, best_loc, best_size
+
+        try:
+            sh, sw = screen_img.shape[:2]
+            screen_gray = cv2.cvtColor(screen_img, cv2.COLOR_BGR2GRAY)
+        except Exception:
+            return best_score, best_loc, best_size
+
+        for scale in scales:
+            try:
+                if scale == 1.0:
+                    tpl = template
+                else:
+                    base_h, base_w = template.shape[:2]
+                    new_w = max(1, int(round(base_w * scale)))
+                    new_h = max(1, int(round(base_h * scale)))
+                    tpl = cv2.resize(template, (new_w, new_h), interpolation=cv2.INTER_AREA)
+
+                th, tw = tpl.shape[:2]
+                if th <= 0 or tw <= 0 or th > sh or tw > sw:
+                    continue
+
+                res_color = cv2.matchTemplate(screen_img, tpl, cv2.TM_CCOEFF_NORMED)
+                _, max_color, _, max_loc_color = cv2.minMaxLoc(res_color)
+                if max_color > best_score:
+                    best_score = float(max_color)
+                    best_loc = max_loc_color
+                    best_size = (tw, th)
+
+                tpl_gray = cv2.cvtColor(tpl, cv2.COLOR_BGR2GRAY)
+                res_gray = cv2.matchTemplate(screen_gray, tpl_gray, cv2.TM_CCOEFF_NORMED)
+                _, max_gray, _, max_loc_gray = cv2.minMaxLoc(res_gray)
+                if max_gray > best_score:
+                    best_score = float(max_gray)
+                    best_loc = max_loc_gray
+                    best_size = (tw, th)
+            except Exception:
+                continue
+
+        return best_score, best_loc, best_size
+
+    def _dismiss_invitation_popup_if_present(self):
+        if getattr(self.driver, "_invitation_306_received", False):
+            return False
+
+        template_path = Path("assets") / "invitation_popup.png"
+        if not template_path.exists():
+            return False
+
+        try:
+            screen_img = self._read_screen_image()
+            template = cv2.imread(str(template_path), cv2.IMREAD_COLOR)
+            if template is None or screen_img is None:
+                return False
+
+            max_val, max_loc, best_size = self._best_template_match(screen_img, template)
+            if max_val < 0.72 or not best_size:
+                return False
+
+            # Reference click points for the invitation accept area.
+            # These are intentionally simple and reused anywhere the popup appears.
+            click_points = ((812, 671), (840, 671), (780, 671))
+
+            # Convert reference points to viewport coordinates and click them.
+            try:
+                canvas = self.driver.find_element("tag name", "canvas")
+                rect = self.driver.execute_script(
+                    "const r = arguments[0].getBoundingClientRect();"
+                    "return {left: r.left, top: r.top, w: Math.floor(r.width), h: Math.floor(r.height)};",
+                    canvas
+                )
+                width = max(int(rect.get("w", 0)), 1)
+                height = max(int(rect.get("h", 0)), 1)
+                left = float(rect.get("left", 0.0))
+                top = float(rect.get("top", 0.0))
+
+                for ref_x, ref_y in click_points:
+                    local_x = int(round((float(ref_x) / 1920.0) * width))
+                    local_y = int(round((float(ref_y) / 1080.0) * height))
+                    local_x = max(1, min(local_x, width - 2 if width > 2 else 1))
+                    local_y = max(1, min(local_y, height - 2 if height > 2 else 1))
+                    abs_x = int(round(left + local_x))
+                    abs_y = int(round(top + local_y))
+
+                    self.driver.execute_cdp_cmd(
+                        "Input.dispatchMouseEvent",
+                        {"type": "mouseMoved", "x": int(abs_x), "y": int(abs_y), "button": "none"}
+                    )
+                    self.driver.execute_cdp_cmd(
+                        "Input.dispatchMouseEvent",
+                        {"type": "mousePressed", "x": int(abs_x), "y": int(abs_y), "button": "left", "clickCount": 1}
+                    )
+                    self.driver.execute_cdp_cmd(
+                        "Input.dispatchMouseEvent",
+                        {"type": "mouseReleased", "x": int(abs_x), "y": int(abs_y), "button": "left", "clickCount": 1}
+                    )
+                    time.sleep(0.5)
+
+                    # If the popup disappeared, mark 306 as handled so we stop checking forever.
+                    screen_after = self._read_screen_image()
+                    if screen_after is not None:
+                        after_score, _, _ = self._best_template_match(screen_after, template)
+                        if after_score < 0.72:
+                            self.driver._invitation_306_received = True
+                            return True
+            except Exception:
+                return False
+
+        except Exception:
+            return False
+
+        return False
     
     def _extract_cmd_from_payload(self, payload):
         try:
@@ -107,6 +234,7 @@ class WSEngine:
         with allure.step(f"WS Scan: Waiting for CMD {target}"):
             end = time.time() + timeout
             while time.time() < end:
+                self._dismiss_invitation_popup_if_present()
                 self._drain_ws_events()
                 start_idx = self._cursor if from_cursor else 0
                 for i in range(start_idx, len(self._ws_buffer)):
@@ -146,6 +274,8 @@ class WSEngine:
 
                     #  FOUND CORRECT EVENT
                     self._cursor = i + 1
+                    if ev["cmd"] == "306":
+                        self.driver._invitation_306_received = True
                         
                     # Attach the found JSON to the Allure report for auditing
                     allure.attach(
