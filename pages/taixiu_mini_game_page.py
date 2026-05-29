@@ -79,7 +79,8 @@ class TaiXiuMiniGamePage(BasePage):
 
         self.ws._wait_for_cmd(
             TAIXIU_MINI_CMD["START_GAME"],
-            timeout=70
+            timeout=70,
+            from_cursor=True
         )
 
         print("Game Start")

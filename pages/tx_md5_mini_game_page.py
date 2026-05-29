@@ -169,7 +169,8 @@ class TaiXiuMd5MiniGamePage(BasePage):
 
         start_ev = self.ws._wait_for_cmd(
             TAIXIU_MD5_MINI_CMD["START_BETTING"],
-            timeout=60
+            timeout=60,
+            from_cursor=True
         )
 
         print("Game Start you can now place bet")
