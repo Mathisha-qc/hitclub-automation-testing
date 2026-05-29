@@ -60,7 +60,7 @@ jobs:
           set TEST_FAILED=0
           for %%F in (
            
-            tests\test_taixiu_mini_flow.py
+            tests\test_mini_poker_flow.py
             
           ) do (
             echo ==================================================
