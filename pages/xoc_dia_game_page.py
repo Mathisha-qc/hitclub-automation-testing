@@ -100,16 +100,16 @@ class XocDiaGamePage(BasePage):
 
         self.ws._wait_for_cmd(
             XOCDIA_LIVE_CMD["BET_START"],
-            timeout=70
+            timeout=70,
+            from_cursor=True
         )
-
-        print("Bet Start")
 
         self.log_step(
             "Bet Start",
             "PASSED",
             "Bet started"
         )
+        print("Bet Start")
     
     @allure.step("Get wallet balance")
     def get_wallet_balance(self) -> float:
@@ -140,7 +140,7 @@ class XocDiaGamePage(BasePage):
         self._interact_canvas(
             x=self.CHIP_1K[0],
             y=self.CHIP_1K[1],
-            wait_after=0.5
+            wait_after=0.1
         )
 
     @allure.step("Bet CHAN")
@@ -165,7 +165,7 @@ class XocDiaGamePage(BasePage):
        
        bet_ev = self.ws._wait_for_cmd(
             XOCDIA_LIVE_CMD["PLACE_BET"],
-            timeout=10,
+            timeout=5,
             from_cursor=True,
             expected_direction="send"
         )
