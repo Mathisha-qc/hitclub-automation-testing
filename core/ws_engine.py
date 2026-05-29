@@ -17,6 +17,8 @@ class WSEngine:
         self.step = step_func
         self._ws_buffer = []
         self._cursor = 0
+        if not hasattr(self.driver, "_invitation_305_last_alert_ts"):
+            self.driver._invitation_305_last_alert_ts = 0.0
 
     def _read_screen_image(self):
         screenshot_bytes = self.driver.get_screenshot_as_png()
@@ -96,10 +98,16 @@ class WSEngine:
             if not pending_305 and not popup_visible:
                 return False
 
+            now = time.time()
+            should_log_305 = (now - getattr(self.driver, "_invitation_305_last_alert_ts", 0.0)) > 2.5
+
             if pending_305:
-                print("[ALERT] CMD 305 detected globally")
+                if should_log_305:
+                    print("[ALERT] CMD 305 detected globally")
+                    self.driver._invitation_305_last_alert_ts = now
                 if not popup_visible:
-                    print("[INFO] Waiting for UI to render the invitation popup...")
+                    if should_log_305:
+                        print("[INFO] Waiting for UI to render the invitation popup...")
                     start = time.time()
                     while time.time() - start < 3:
                         time.sleep(0.25)

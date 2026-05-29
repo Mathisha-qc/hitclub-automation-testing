@@ -149,7 +149,7 @@ class XocDiaGamePage(BasePage):
         self._interact_canvas(
             x=self.BET_CHAN[0],
             y=self.BET_CHAN[1],
-            wait_after=1.0
+            wait_after=0.1
         )
 
     @allure.step("Bet LE")
@@ -158,7 +158,7 @@ class XocDiaGamePage(BasePage):
         self._interact_canvas(
             x=self.BET_LE[0],
             y=self.BET_LE[1],
-            wait_after=1.0
+            wait_after=0.1
         )
 
     def validating_bet(self):
