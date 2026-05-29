@@ -78,6 +78,7 @@ def login_and_clear_popups(driver, username=None, password=None, captcha=None):
 
     time.sleep(30)
     driver.refresh()
+    time.sleep(5)
     with allure.step("Fetch Wallet (CMD 100)"):
         ev = ws._wait_for_cmd(WS_CMD["USER_INFO"], timeout=40)
 
