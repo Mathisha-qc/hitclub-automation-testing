@@ -7,6 +7,7 @@ from pathlib import Path
 import cv2
 import numpy as np
 
+from utils.ws_commands import WS_CMD
 from reports.custom_report import get_cmd_name, report
 
 class WSEngine:
@@ -78,13 +79,39 @@ class WSEngine:
             return False
 
         try:
+            self._drain_ws_events()
+            pending_305 = any(
+                str(ev.get("cmd")) == str(WS_CMD["INVITATION"])
+                for ev in self._ws_buffer[-30:]
+            )
+
             screen_img = self._read_screen_image()
             template = cv2.imread(str(template_path), cv2.IMREAD_COLOR)
             if template is None or screen_img is None:
                 return False
 
             max_val, max_loc, best_size = self._best_template_match(screen_img, template)
-            if max_val < 0.72 or not best_size:
+            popup_visible = max_val >= 0.72 and bool(best_size)
+
+            if not pending_305 and not popup_visible:
+                return False
+
+            if pending_305:
+                print("[ALERT] CMD 305 detected globally")
+                if not popup_visible:
+                    print("[INFO] Waiting for UI to render the invitation popup...")
+                    start = time.time()
+                    while time.time() - start < 3:
+                        time.sleep(0.25)
+                        screen_img = self._read_screen_image()
+                        if screen_img is None:
+                            continue
+                        max_val, _, best_size = self._best_template_match(screen_img, template)
+                        popup_visible = max_val >= 0.72 and bool(best_size)
+                        if popup_visible:
+                            break
+
+            if not popup_visible:
                 return False
 
             # Reference click points for the invitation accept area.
@@ -131,7 +158,6 @@ class WSEngine:
                     if screen_after is not None:
                         after_score, _, _ = self._best_template_match(screen_after, template)
                         if after_score < 0.72:
-                            self.driver._invitation_306_received = True
                             return True
             except Exception:
                 return False

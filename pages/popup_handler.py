@@ -40,85 +40,8 @@ class PopupHandler(BasePage):
 
     def _handle_invitation(self, context_msg=""):
         """
-        Handles the Invitation Popup. Network acts as an alert, but Visual acts as the safety lock.
-        Returns a tuple: (handled_305, received_306)
+        Invitation handling is now global in the WebSocket engine.
+        This method remains only as a compatibility wrapper for older callers.
         """
-        print(f"[INFO] Checking for Invitation ({context_msg})...")
-        handled_305 = False
-        received_306 = False
-        safe_to_click = False
-
-        # Rule: if 306 already exists once, skip future invitation checks/clicks.
-        if self.driver._invitation_306_received:
-            print("[INFO] 306 already received earlier. Skipping invitation handling.")
-            return handled_305, True
-
-        # Check recent websocket buffer first (handles case where 306 came before this method call).
-        try:
-            self.ws._drain_ws_events()
-            for ev in reversed(self.ws._ws_buffer):
-                if str(ev.get("cmd")) == str(WS_CMD["INVITATION_CONFIRM"]):
-                    self.driver._invitation_306_received = True
-                    print("[INFO] 306 already present in WS logs. Skipping invitation handling.")
-                    return handled_305, True
-        except Exception:
-            pass
-
-        # --- STEP 1: Check Network (WebSocket) ---
-        try:
-            ev_305 = self.ws._wait_for_cmd(
-                WS_CMD["INVITATION"],
-                timeout=3,
-                from_cursor=True,
-            )
-            if ev_305:
-                print(f"[ALERT] CMD 305 detected via WebSocket ({context_msg})")
-                
-                # NEW: Network says yes, but we MUST verify the UI actually shows it!
-                print("[INFO] Waiting for UI to render the invitation popup...")
-                if self._wait_for_image_on_screen("invitation_popup.png", timeout=3):
-                    print("[SUCCESS] Invitation verified on screen.")
-                    safe_to_click = True
-                else:
-                    print("[WARN] Ghost Event: Network got 305, but UI never rendered it. Aborting click.")
-                    
-        except AssertionError:
-            print(f"[INFO] No CMD 305 via WebSocket ({context_msg})")
-
-        # --- STEP 2: Fallback Visual Check ---
-        # If WebSocket completely missed it, check if it's physically sitting on the screen
-        if not safe_to_click:
-            print(f"[INFO] Checking visually for invitation popup ({context_msg})...")
-            if self._is_image_on_screen("invitation_popup.png"):
-                print(f"[ALERT] Invitation popup detected visually ({context_msg})")
-                safe_to_click = True
-            else:
-                print(f"[INFO] Invitation popup NOT present visually ({context_msg})")
-
-        # --- STEP 3: Safely Click ---
-        # We ONLY click if OpenCV explicitly verified it exists on the screen
-        if safe_to_click:
-            handled_305 = True
-            print("[INFO] clicking invitation...")
-            self._interact_canvas(
-                x=812,
-                y=671,
-                wait_after=2,
-                suppress_invitation_handling=True
-            )
-
-            try:
-                ev_306 = self.ws._wait_for_cmd(
-                    WS_CMD["INVITATION_CONFIRM"],
-                    timeout=5,
-                    from_cursor=True,
-                    expected_direction=None
-                )
-                if ev_306:
-                    received_306 = True
-                    self.driver._invitation_306_received = True
-                    print("[SUCCESS] CMD 306 received")
-            except AssertionError:
-                print("[WARN] 306 not received")
-
-        return handled_305, received_306
+        print(f"[INFO] Invitation handling is global now; skipping popup-handler path ({context_msg}).")
+        return False, self.driver._invitation_306_received
