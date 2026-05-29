@@ -1,5 +1,6 @@
 import allure
 import hashlib
+import time
 
 from pages.base_page import BasePage
 from utils.ws_commands import TAIXIU_MD5_MINI_CMD, WS_CMD
@@ -38,6 +39,8 @@ class TaiXiuMd5MiniGamePage(BasePage):
         super().__init__(driver)
 
         self.ws = WSEngine(driver, self.log_step)
+        self._round_start_ts = None
+        self._round_end_ts = None
 
     # -----------------------------------
     # Open Game
@@ -145,7 +148,7 @@ class TaiXiuMd5MiniGamePage(BasePage):
 
             final_ev = self.ws._wait_for_cmd(
                 WS_CMD["WALLET_UPDATE"],
-                timeout=5,
+                timeout=2,
                 from_cursor=True
             )
 
@@ -153,6 +156,10 @@ class TaiXiuMd5MiniGamePage(BasePage):
                 final_ev,
                 ["wallet", "balance", "gold"]
             )
+
+            if self._round_end_ts is not None:
+                elapsed = time.time() - self._round_end_ts
+                print(f"[TIMING] END_GAME -> WALLET_UPDATE: {elapsed:.2f}s")
 
             return wallet_final
 
@@ -174,6 +181,7 @@ class TaiXiuMd5MiniGamePage(BasePage):
         )
 
         print("Game Start you can now place bet")
+        self._round_start_ts = time.time()
 
         initial_md5_hash = ""
 
@@ -215,29 +223,32 @@ class TaiXiuMd5MiniGamePage(BasePage):
         self._interact_canvas(
             x=bet_coord[0],
             y=bet_coord[1],
-            wait_after=0.1
+            wait_after=0.05
         )
 
         self._interact_canvas(
             x=self.CHIP_1000[0],
             y=self.CHIP_1000[1],
-            wait_after=0.1
+            wait_after=0.05
         )
 
         self._interact_canvas(
             x=self.PLACE_BET[0],
             y=self.PLACE_BET[1],
-            wait_after=0.2
+            wait_after=0.05
         )
 
         bet_ev = self.ws._wait_for_cmd(
             TAIXIU_MD5_MINI_CMD["ADD_BETTING"],
-            timeout=10,
+            timeout=2,
             from_cursor=True,
             expected_direction="send"
         )
 
         print("Bet placed")
+        if self._round_start_ts is not None:
+            elapsed = time.time() - self._round_start_ts
+            print(f"[TIMING] START_BETTING -> ADD_BETTING: {elapsed:.2f}s")
 
         bet_amount = self.ws._extract_amount(
             bet_ev,
@@ -266,6 +277,7 @@ class TaiXiuMd5MiniGamePage(BasePage):
         )
 
         print("Round end")
+        self._round_end_ts = time.time()
 
         game_result_string = ""
 
@@ -333,7 +345,7 @@ class TaiXiuMd5MiniGamePage(BasePage):
         self._interact_canvas(
             x=self.CHAT_BOX[0],
             y=self.CHAT_BOX[1],
-            wait_after=4.0
+            wait_after=0.5
         )
 
         chat_input = self.driver.switch_to.active_element
