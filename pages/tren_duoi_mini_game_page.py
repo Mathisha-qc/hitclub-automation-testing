@@ -291,12 +291,22 @@ class TrenDuoiMiniGamePage(BasePage):
             + cv2.THRESH_OTSU
         )
 
-        text_raw = (
-            pytesseract.image_to_string(
-                th,
-                config="--oem 3 --psm 7"
-            ).upper()
-        )
+        if not TESSERACT_READY:
+            text_raw = ""
+        else:
+            try:
+                text_raw = (
+                    pytesseract.image_to_string(
+                        th,
+                        config="--oem 3 --psm 7"
+                    ).upper()
+                )
+            except (PermissionError, pytesseract.TesseractNotFoundError) as exc:
+                print(f"[WARN] Start button OCR unavailable: {exc}")
+                text_raw = ""
+            except Exception as exc:
+                print(f"[WARN] Start button OCR failed: {exc}")
+                text_raw = ""
 
         text = "".join(
             ch for ch in text_raw
