@@ -60,7 +60,7 @@ jobs:
           set TEST_FAILED=0
           for %%F in (
            
-            tests\test_tren_duoi_mini_flow.py
+            tests\test_txmd5_mini_flow.py
             
           ) do (
             echo ==================================================
