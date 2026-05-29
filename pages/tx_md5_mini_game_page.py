@@ -58,7 +58,7 @@ class TaiXiuMd5MiniGamePage(BasePage):
         success = self._wait_and_click_image(
             image_filename="md5_icon.png", 
             timeout=5.0, 
-            wait_after=1.0
+            wait_after=5.0
         )
 
         if success:
