@@ -49,13 +49,13 @@ class TaiXiuMd5MiniGamePage(BasePage):
         self._wait_and_click_image(
             image_filename="mini_game_icon.png", 
             timeout=5.0, 
-            wait_after=5.0
+            wait_after=1.0
         )
 
         success = self._wait_and_click_image(
             image_filename="md5_icon.png", 
             timeout=5.0, 
-            wait_after=5.0
+            wait_after=1.0
         )
 
         if success:
@@ -191,7 +191,7 @@ class TaiXiuMd5MiniGamePage(BasePage):
         self.log_step(
             "Game Start",
             "PASSED",
-            f"Hash received: {initial_md5_hash}"
+            f"Hash received: {initial_md5_hash}",
         )
 
         return initial_md5_hash
@@ -215,19 +215,19 @@ class TaiXiuMd5MiniGamePage(BasePage):
         self._interact_canvas(
             x=bet_coord[0],
             y=bet_coord[1],
-            wait_after=0.4
+            wait_after=0.1
         )
 
         self._interact_canvas(
             x=self.CHIP_1000[0],
             y=self.CHIP_1000[1],
-            wait_after=0.4
+            wait_after=0.1
         )
 
         self._interact_canvas(
             x=self.PLACE_BET[0],
             y=self.PLACE_BET[1],
-            wait_after=1.0
+            wait_after=0.2
         )
 
         bet_ev = self.ws._wait_for_cmd(
