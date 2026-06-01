@@ -13,7 +13,7 @@ class XocDiaGamePage(BasePage):
     # Canvas Coordinates
     # -----------------------------
 
-    LIVE_TAB = (1379, 206)
+    LIVE_TAB = (1379, 232)
 
     CHIP_1K = (769, 881)
 
