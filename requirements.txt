@@ -4,10 +4,14 @@ webdriver-manager
 allure-pytest
 pytest-html
 opencv-python
-pyautogui
+pyautogui; platform_system == "Windows"
 mss
 numpy
 Pillow
+pytesseract
+flake8
+pytest-xdist
+pytest-rerunfailures
 
 
 

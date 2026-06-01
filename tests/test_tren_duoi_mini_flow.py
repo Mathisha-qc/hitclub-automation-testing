@@ -2,6 +2,7 @@
 
 import allure
 import time
+import pytest
 
 from tests.login_popup_flow import (
     login_and_clear_popups
@@ -16,6 +17,7 @@ from reports.custom_report import report
 
 @allure.feature("Tren-Duoi")
 @allure.story("Open game entry flow")
+@pytest.mark.smoke
 def test_trenduoi_mini_open_flow(driver):
 
     report.game_name = "Tren-Duoi Mini"

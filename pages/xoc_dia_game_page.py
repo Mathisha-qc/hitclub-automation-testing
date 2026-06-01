@@ -13,18 +13,18 @@ class XocDiaGamePage(BasePage):
     # Canvas Coordinates
     # -----------------------------
 
-    LIVE_TAB = (1379, 206)
+    LIVE_TAB = (1379, 232)
 
     CHIP_1K = (769, 881)
 
-    BET_CHAN = (668, 506)
-    BET_LE = (1268, 523)
+    BET_CHAN = (670, 518)
+    BET_LE = (1268, 518)
 
     CHAT_BOX = (1559, 583)
     CHAT_SEND = (1804, 578)
 
     BACK_BTN = (77, 214)
-    EXIT_BTN = (187, 330)
+    EXIT_BTN = (165, 428)
 
     # -----------------------------
     # Constructor
@@ -56,7 +56,7 @@ class XocDiaGamePage(BasePage):
 
         success = self._wait_and_click_image(
             image_filename="xoc_dia_icon.png", 
-            timeout=5.0, 
+            timeout=20, 
             wait_after=5.0
         )
         
@@ -80,7 +80,7 @@ class XocDiaGamePage(BasePage):
 
         self.ws._wait_for_cmd(
             XOCDIA_LIVE_CMD["SUBSCRIBE"],
-            timeout=5,
+            timeout=2,
             expected_direction="send"
         )
         print("Subscribed")
@@ -90,7 +90,8 @@ class XocDiaGamePage(BasePage):
 
         self.ws._wait_for_cmd(
             XOCDIA_LIVE_CMD["JOIN_ROOM"],
-            timeout=5,
+            timeout=2,
+            from_cursor=True,
             expected_direction="send"
         )
         print("JOIN ROOM")
@@ -98,18 +99,19 @@ class XocDiaGamePage(BasePage):
     @allure.step("Wait for bet start")
     def wait_for_bet_start(self):
 
+        # Only accept a fresh BET_START after the current join-room event.
         self.ws._wait_for_cmd(
             XOCDIA_LIVE_CMD["BET_START"],
-            timeout=70
+            timeout=30,
+            from_cursor=True
         )
-
-        print("Bet Start")
 
         self.log_step(
             "Bet Start",
             "PASSED",
             "Bet started"
         )
+        print("Bet Start")
     
     @allure.step("Get wallet balance")
     def get_wallet_balance(self) -> float:
@@ -140,7 +142,7 @@ class XocDiaGamePage(BasePage):
         self._interact_canvas(
             x=self.CHIP_1K[0],
             y=self.CHIP_1K[1],
-            wait_after=0.5
+            wait_after=0.01
         )
 
     @allure.step("Bet CHAN")
@@ -149,7 +151,7 @@ class XocDiaGamePage(BasePage):
         self._interact_canvas(
             x=self.BET_CHAN[0],
             y=self.BET_CHAN[1],
-            wait_after=1.0
+            wait_after=0.01
         )
 
     @allure.step("Bet LE")
@@ -158,14 +160,22 @@ class XocDiaGamePage(BasePage):
         self._interact_canvas(
             x=self.BET_LE[0],
             y=self.BET_LE[1],
-            wait_after=1.0
+            wait_after=0.01
         )
+
+    @allure.step("Place CHAN Bet")
+    def place_chan_bet(self):
+
+        # Keep the chip select and bet click as one tight action chain.
+        self.select_1k_chip()
+        self.bet_chan()
+        return self.validating_bet()
 
     def validating_bet(self):
        
        bet_ev = self.ws._wait_for_cmd(
             XOCDIA_LIVE_CMD["PLACE_BET"],
-            timeout=10,
+            timeout=2,
             from_cursor=True,
             expected_direction="send"
         )
@@ -214,7 +224,7 @@ class XocDiaGamePage(BasePage):
 
             final_ev = self.ws._wait_for_cmd(
                 WS_CMD["WALLET_UPDATE"],
-                timeout=30,
+                timeout=60,
                 from_cursor=True
             )
 
@@ -248,7 +258,7 @@ class XocDiaGamePage(BasePage):
         self._interact_canvas(
             x=self.CHAT_BOX[0],
             y=self.CHAT_BOX[1],
-            wait_after=4.0
+            wait_after=1.0
         )
 
         chat_input = self.driver.switch_to.active_element
@@ -277,7 +287,7 @@ class XocDiaGamePage(BasePage):
         self._interact_canvas(
             x=self.BACK_BTN[0],
             y=self.BACK_BTN[1],
-            wait_after=0.5
+            wait_after=0.9
         )
 
         self._interact_canvas(

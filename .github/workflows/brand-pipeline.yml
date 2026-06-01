@@ -1,0 +1,103 @@
+name: Brand Pipeline
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "tests/**"
+      - "core/**"
+      - "pages/**"
+      - "config/**"
+      - "conftest.py"
+      - "pytest.ini"
+      - "requirements.txt"
+
+jobs:
+  test-suite:
+    runs-on: self-hosted
+    timeout-minutes: 60
+    env:
+      PYTHON_EXE: C:\Program Files\Python311\python.exe
+      PYTHONUNBUFFERED: "1"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          clean: false
+
+      - name: Show Python version
+        shell: cmd
+        run: |
+          "%PYTHON_EXE%" --version
+          "%PYTHON_EXE%" -m pip --version
+          "%PYTHON_EXE%" -c "import platform; print(platform.machine())"
+
+      - name: Install dependencies
+        shell: cmd
+        run: |
+          "%PYTHON_EXE%" -m venv .venv
+          .\.venv\Scripts\python -m pip install --upgrade pip
+          .\.venv\Scripts\pip install -r requirements.txt
+
+      - name: Validate required credentials
+        shell: cmd
+        env:
+          BASE_URL: ${{ secrets.BASE_URL }}
+          TEST_USERNAME: ${{ secrets.TEST_USERNAME }}
+          TEST_PASSWORD: ${{ secrets.TEST_PASSWORD }}
+        run: |
+          if "%BASE_URL%"=="" (echo Missing BASE_URL in secrets & exit /b 1)
+          if "%TEST_USERNAME%"=="" (echo Missing TEST_USERNAME in secrets & exit /b 1)
+          if "%TEST_PASSWORD%"=="" (echo Missing TEST_PASSWORD in secrets & exit /b 1)
+
+      - name: Run full suite
+        shell: cmd
+        env:
+          TEST_USERNAME: ${{ secrets.TEST_USERNAME }}
+          TEST_PASSWORD: ${{ secrets.TEST_PASSWORD }}
+          TEST_CAPTCHA: ${{ secrets.TEST_CAPTCHA }}
+          BASE_URL: ${{ secrets.BASE_URL }}
+          FORCE_VISIBLE_BROWSER: "false"
+        run: |
+          set TEST_FAILED=0
+          for %%F in (
+            tests\test_xoc_dia_flow.py
+            tests\test_taixiu_mini_flow.py
+            tests\test_txmd5_mini_flow.py
+            tests\test_mini_poker_flow.py
+            tests\test_tren_duoi_mini_flow.py
+            tests\test_bi_mat_cleopatra_flow.py
+            tests\test_cung_hy_phat_tai_flow.py
+            tests\test_hac_thoai_ngo_khong_flow.py
+            tests\test_kho_bau_tu_linh_flow.py
+            tests\test_linh_chau_at_ty_flow.py
+            tests\test_sac_xuan_cho_tet_flow.py
+            tests\test_son_tinh_thuy_tinh_flow.py
+          ) do (
+            echo ==================================================
+            if exist "%%F" (
+              echo Running %%F
+              .\.venv\Scripts\python -u -m pytest "%%F" --alluredir=allure-results --tb=short -v || (
+                echo FAILED: %%F
+                set TEST_FAILED=1
+              )
+            ) else (
+              echo MISSING: %%F
+              set TEST_FAILED=1
+            )
+          )
+          if "%TEST_FAILED%"=="1" (
+            echo One or more game tests failed.
+            exit /b 1
+          )
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: main-full-suite-results-${{ github.run_number }}
+          path: |
+            allure-results/
+            reports/*.zip
+          if-no-files-found: warn

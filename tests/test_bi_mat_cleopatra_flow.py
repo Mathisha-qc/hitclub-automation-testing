@@ -1,5 +1,6 @@
 import allure
 import time
+import pytest
 from tests.login_popup_flow import login_and_clear_popups
 from pages.bi_mat_cleopatra_page import BiMatGamePage
 from reports.custom_report import report
@@ -7,6 +8,7 @@ from reports.custom_report import report
 
 @allure.feature("Bi Mat Cleopatra Game")
 @allure.story("Open game entry flow")
+@pytest.mark.smoke
 
 def test_bi_mat_flow(driver):
     report.game_name = "Bi Mat Cleopatra"

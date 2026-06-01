@@ -1,5 +1,6 @@
 import time
 import allure
+import pytest
 
 from tests.login_popup_flow import login_and_clear_popups
 from pages.taixiu_mini_game_page import TaiXiuMiniGamePage
@@ -8,6 +9,7 @@ from reports.custom_report import report
 
 @allure.feature("Tai Xiu Mini")
 @allure.story("Open game entry flow")
+@pytest.mark.smoke
 def test_taixiu_mini_open_flow(driver):
 
     report.game_name = "TaiXiu Mini"

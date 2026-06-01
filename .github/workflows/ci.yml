@@ -1,0 +1,90 @@
+name: PR Validation
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint-and-smoke:
+    runs-on: self-hosted
+    timeout-minutes: 60
+    env:
+      PYTHON_EXE: C:\Program Files\Python311\python.exe
+      PYTHONUNBUFFERED: "1"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          clean: false
+
+      - name: Show Python version
+        shell: cmd
+        run: |
+          "%PYTHON_EXE%" --version
+          "%PYTHON_EXE%" -m pip --version
+          "%PYTHON_EXE%" -c "import platform; print(platform.machine())"
+
+      - name: Install dependencies
+        shell: cmd
+        run: |
+          "%PYTHON_EXE%" -m venv .venv
+          .\.venv\Scripts\python -m pip install --upgrade pip
+          .\.venv\Scripts\pip install -r requirements.txt
+
+      - name: Lint with flake8
+        shell: cmd
+        run: |
+          .\.venv\Scripts\flake8 tests/ pages/ core/ conftest.py --count --select=E9,F63,F7,F82 --show-source --statistics
+
+      - name: Validate required credentials
+        shell: cmd
+        env:
+          BASE_URL: ${{ secrets.BASE_URL }}
+          TEST_USERNAME: ${{ secrets.TEST_USERNAME }}
+          TEST_PASSWORD: ${{ secrets.TEST_PASSWORD }}
+        run: |
+          if "%BASE_URL%"=="" (echo Missing BASE_URL in secrets & exit /b 1)
+          if "%TEST_USERNAME%"=="" (echo Missing TEST_USERNAME in secrets & exit /b 1)
+          if "%TEST_PASSWORD%"=="" (echo Missing TEST_PASSWORD in secrets & exit /b 1)
+
+      - name: Run smoke tests
+        shell: cmd
+        env:
+          TEST_USERNAME: ${{ secrets.TEST_USERNAME }}
+          TEST_PASSWORD: ${{ secrets.TEST_PASSWORD }}
+          TEST_CAPTCHA: ${{ secrets.TEST_CAPTCHA }}
+          BASE_URL: ${{ secrets.BASE_URL }}
+          FORCE_VISIBLE_BROWSER: "false"
+        run: |
+          set TEST_FAILED=0
+          for %%F in (
+            tests\test_cung_hy_phat_tai_flow.py
+            
+          ) do (
+            echo ==================================================
+            if exist "%%F" (
+              echo Running %%F
+              .\.venv\Scripts\python -u -m pytest "%%F" -m "smoke" --maxfail=1 --tb=short -q -s || (
+                echo FAILED: %%F
+                set TEST_FAILED=1
+              )
+            ) else (
+              echo MISSING: %%F
+              set TEST_FAILED=1
+            )
+          )
+          if "%TEST_FAILED%"=="1" (
+            echo One or more smoke game tests failed.
+            exit /b 1
+          )
+
+      - name: Upload Allure results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-results-${{ github.run_number }}
+          path: |
+            allure-results/
+            reports/*.zip
+          if-no-files-found: warn

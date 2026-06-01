@@ -1,6 +1,7 @@
 import pytest
 import time
 import os
+import re
 import tempfile
 import shutil
 import zipfile
@@ -13,6 +14,7 @@ from selenium.webdriver.chrome.options import Options
 from webdriver_manager.chrome import ChromeDriverManager
 from utils.screen_recorder import ScreenRecorder
 from reports.custom_report import report, write_html_report
+from config.config import TestData
 
 
 def log_runtime(message: str):
@@ -22,10 +24,15 @@ def log_runtime(message: str):
 
 
 def pytest_configure(config):
+    TestData.username = os.getenv("TEST_USERNAME", TestData.username)
+    TestData.password = os.getenv("TEST_PASSWORD", TestData.password)
+    TestData.captcha = os.getenv("TEST_CAPTCHA", TestData.captcha)
+    TestData.base_url = os.getenv("BASE_URL", TestData.base_url)
+
     # This adds a custom 'Environment' section to your Allure Dashboard
     report.title = "HitClub Automation Report"
-    report.base_url = "https://v.hitclub.sc/"
-    report.username = "Mathisha1"
+    report.base_url = TestData.base_url
+    report.username = TestData.username
     report.browser_name = "Chrome"
     report.captcha_mode = "Auto"
     report.game_name = "Lobby"   # default (will override per game)
@@ -41,11 +48,13 @@ def driver():
     chrome_options = Options()
 
     is_ci = bool(os.getenv("JENKINS_URL")) or os.getenv("CI", "").lower() == "true"
-    run_mode = "Jenkins/CI Headless" if is_ci else "Local Visible Chrome"
+    force_visible = os.getenv("FORCE_VISIBLE_BROWSER", "").lower() in ("1", "true", "yes")
+    is_headless = is_ci and not force_visible
+    run_mode = "CI Headless" if is_headless else "Visible Chrome"
     log_runtime(f"Driver setup started. Mode: {run_mode}")
     
     # This is the "Magic" flag that keeps the browser open after the script ends
-    if not is_ci:
+    if not is_headless:
         chrome_options.add_experimental_option("detach", True)
 
     chrome_options.set_capability('goog:loggingPrefs', {'performance': 'INFO'})
@@ -70,9 +79,13 @@ def driver():
     chrome_options.add_argument("--disable-renderer-backgrounding")
     chrome_options.add_argument("--disable-backgrounding-occluded-windows")
 
-    if is_ci:
+    if is_headless:
         chrome_options.add_argument("--headless=new")
         chrome_options.add_argument("--window-size=1920,1080")
+        chrome_options.add_argument("--force-device-scale-factor=1")
+        chrome_options.add_argument("--disable-gpu")
+        chrome_options.add_argument("--disable-extensions")
+        chrome_options.add_argument("--disable-popup-blocking")
         chrome_options.add_argument("--no-sandbox")
         chrome_options.add_argument("--disable-dev-shm-usage")
     
@@ -83,14 +96,31 @@ def driver():
 
     # 3. Explicitly enable Network domain for CDP events
     driver.execute_cdp_cmd("Network.enable", {})
+    # Lock viewport metrics so canvas coordinates stay stable in headless CI.
+    driver.set_window_size(1920, 1080)
+    driver.execute_cdp_cmd(
+        "Emulation.setDeviceMetricsOverride",
+        {
+            "width": 1920,
+            "height": 1080,
+            "deviceScaleFactor": 1,
+            "mobile": False
+        }
+    )
     log_runtime("CDP Network logging enabled.")
     
     # 4. Provide the driver to the test
     yield driver
     
     # 5. Teardown
-    # We print the info but DO NOT call driver.quit() or driver.close()
-    log_runtime("Session finished. Browser remains open by design.")
+    if is_ci:
+        try:
+            driver.quit()
+            log_runtime("Session finished. Browser closed for CI.")
+        except Exception as e:
+            log_runtime(f"[WARN] Browser close failed: {e}")
+    else:
+        log_runtime("Session finished. Browser remains open by design.")
     log_runtime(f"Profile Path: {temp_profile}")
 
 
@@ -200,8 +230,10 @@ def pytest_sessionfinish(session, exitstatus):
 
     try:
         # 1. CREATE THE PERFECT ZIP FILE FOR SHARING
-        safe_game_name = report.game_name.replace(" ", "_") if report.game_name else "Game"
-        zip_name = f"reports/{safe_game_name}_Report_{int(time.time())}.zip"
+        safe_game_name_raw = report.game_name if report.game_name else "Game"
+        safe_game_name = re.sub(r"[^A-Za-z0-9_-]+", "_", safe_game_name_raw).strip("_") or "Game"
+        run_stamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+        zip_name = f"reports/{safe_game_name}_Report_{run_stamp}.zip"
         zip_path = Path(zip_name).resolve()
         
         import zipfile
@@ -228,12 +260,13 @@ def pytest_sessionfinish(session, exitstatus):
             output_dir.rename(latest_dir)
             log_runtime("Temporary report folder moved to 'latest_run'.")
         
-        # 3. OPEN THE LOCAL HTML FILE IN CHROME
-        import webbrowser
-        final_html_path = latest_dir / "custom_report.html"
-        chrome_path = "C:/Program Files/Google/Chrome/Application/chrome.exe %s"
-        webbrowser.get(chrome_path).open(final_html_path.resolve().as_uri())
-        log_runtime(f"HTML report opened: {final_html_path.resolve()}")
+        # 3. OPEN LOCAL HTML ONLY FOR NON-CI RUNS
+        if os.getenv("CI", "").lower() != "true":
+            import webbrowser
+            final_html_path = latest_dir / "custom_report.html"
+            chrome_path = "C:/Program Files/Google/Chrome/Application/chrome.exe %s"
+            webbrowser.get(chrome_path).open(final_html_path.resolve().as_uri())
+            log_runtime(f"HTML report opened: {final_html_path.resolve()}")
 
     except Exception as e:
         log_runtime(f"[ERROR] Session finish failed: {e}")

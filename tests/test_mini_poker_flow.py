@@ -1,5 +1,6 @@
 import time
 import allure
+import pytest
 
 from tests.login_popup_flow import login_and_clear_popups
 from pages.mini_poker_game_page import MiniPokerGamePage
@@ -8,6 +9,7 @@ from reports.custom_report import report
 
 @allure.feature("MiniPoker")
 @allure.story("Open game entry flow")
+@pytest.mark.smoke
 def test_mini_poker_open_flow(driver):
 
     report.game_name = "MiniPoker (Game_id-199)"

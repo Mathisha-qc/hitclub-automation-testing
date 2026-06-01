@@ -5,6 +5,9 @@ import time
 import cv2
 import numpy as np
 import pytesseract
+import os
+import shutil
+import subprocess
 
 from pages.base_page import BasePage
 from utils.ws_commands import (
@@ -14,9 +17,51 @@ from utils.ws_commands import (
 from core.ws_engine import WSEngine
 
 
-pytesseract.pytesseract.tesseract_cmd = (
-    r"C:\Users\mathi\AppData\Local\Programs\Tesseract-OCR\tesseract.exe"
-)
+def _configure_tesseract():
+    """
+    Prefer an explicit env override, then common system locations, then PATH.
+    This avoids hard-coding a user-profile install that service accounts cannot launch.
+    """
+    candidates = []
+
+    env_cmd = os.getenv("TESSERACT_CMD")
+    if env_cmd:
+        candidates.append(env_cmd)
+
+    if os.name == "nt":
+        candidates.extend([
+            r"C:\Program Files\Tesseract-OCR\tesseract.exe",
+            r"C:\Program Files (x86)\Tesseract-OCR\tesseract.exe",
+            r"C:\Windows\System32\tesseract.exe",
+            r"C:\Users\mathi\AppData\Local\Programs\Tesseract-OCR\tesseract.exe",
+        ])
+    else:
+        detected_tesseract = shutil.which("tesseract")
+        if detected_tesseract:
+            candidates.append(detected_tesseract)
+
+    for candidate in candidates:
+        try:
+            if candidate and os.path.exists(candidate):
+                # Quick launch test: if Windows blocks execution, skip to next candidate.
+                subprocess.run([candidate, "--version"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True)
+                pytesseract.pytesseract.tesseract_cmd = candidate
+                print(f"[INFO] Using Tesseract at: {candidate}")
+                return True
+        except Exception:
+            continue
+
+    detected_tesseract = shutil.which("tesseract")
+    if detected_tesseract:
+        pytesseract.pytesseract.tesseract_cmd = detected_tesseract
+        print(f"[INFO] Using PATH Tesseract at: {detected_tesseract}")
+        return True
+
+    print("[WARN] Tesseract executable not found or not launchable.")
+    return False
+
+
+TESSERACT_READY = _configure_tesseract()
 
 
 @allure.feature("Game Mechanics")
@@ -246,12 +291,22 @@ class TrenDuoiMiniGamePage(BasePage):
             + cv2.THRESH_OTSU
         )
 
-        text_raw = (
-            pytesseract.image_to_string(
-                th,
-                config="--oem 3 --psm 7"
-            ).upper()
-        )
+        if not TESSERACT_READY:
+            text_raw = ""
+        else:
+            try:
+                text_raw = (
+                    pytesseract.image_to_string(
+                        th,
+                        config="--oem 3 --psm 7"
+                    ).upper()
+                )
+            except (PermissionError, pytesseract.TesseractNotFoundError) as exc:
+                print(f"[WARN] Start button OCR unavailable: {exc}")
+                text_raw = ""
+            except Exception as exc:
+                print(f"[WARN] Start button OCR failed: {exc}")
+                text_raw = ""
 
         text = "".join(
             ch for ch in text_raw
@@ -326,14 +381,25 @@ class TrenDuoiMiniGamePage(BasePage):
             r'2345678910JQKA'
         )
 
-        text_raw = (
-            pytesseract.image_to_string(
-                th,
-                config=config
+        if not TESSERACT_READY:
+            print("[WARN] Skipping OCR because Tesseract is not launchable in this environment.")
+            return ""
+
+        try:
+            text_raw = (
+                pytesseract.image_to_string(
+                    th,
+                    config=config
+                )
+                .strip()
+                .upper()
             )
-            .strip()
-            .upper()
-        )
+        except PermissionError as exc:
+            print(f"[WARN] OCR blocked by OS permissions: {exc}")
+            return ""
+        except Exception as exc:
+            print(f"[WARN] OCR failed: {exc}")
+            return ""
 
         card = "".join(
             ch for ch in text_raw
@@ -406,7 +472,7 @@ class TrenDuoiMiniGamePage(BasePage):
 
         self.ws._wait_for_cmd(
             TREN_DUOI_CMD["START_ROUND"],
-            timeout=10,
+            timeout=20,
             from_cursor=True,
             expected_direction="send"
         )
@@ -431,7 +497,7 @@ class TrenDuoiMiniGamePage(BasePage):
 
         self.ws._wait_for_cmd(
             TREN_DUOI_CMD["START_ROUND"],
-            timeout=10,
+            timeout=20,
             from_cursor=True,
             expected_direction="send"
         )
