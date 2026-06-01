@@ -59,7 +59,7 @@ jobs:
         run: |
           set TEST_FAILED=0
           for %%F in (
-            tests\test_xoc_dia_flow.py
+            tests\test_cung_hy_phat_tai_flow.py
             
           ) do (
             echo ==================================================
