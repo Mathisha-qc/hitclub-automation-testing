@@ -91,6 +91,7 @@ class XocDiaGamePage(BasePage):
         self.ws._wait_for_cmd(
             XOCDIA_LIVE_CMD["JOIN_ROOM"],
             timeout=5,
+            from_cursor=True,
             expected_direction="send"
         )
         print("JOIN ROOM")
@@ -98,6 +99,7 @@ class XocDiaGamePage(BasePage):
     @allure.step("Wait for bet start")
     def wait_for_bet_start(self):
 
+        # Only accept a fresh BET_START after the current join-room event.
         self.ws._wait_for_cmd(
             XOCDIA_LIVE_CMD["BET_START"],
             timeout=30,
