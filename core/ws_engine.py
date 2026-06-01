@@ -72,8 +72,26 @@ class WSEngine:
 
         return best_score, best_loc, best_size
 
+    def _sync_invitation_306_from_buffer(self):
+        if getattr(self.driver, "_invitation_306_received", False):
+            return True
+
+        try:
+            self._drain_ws_events()
+            for ev in reversed(self._ws_buffer[-30:]):
+                if str(ev.get("cmd")) == str(WS_CMD["INVITATION_CONFIRM"]):
+                    self.driver._invitation_306_received = True
+                    return True
+        except Exception:
+            pass
+
+        return False
+
     def _dismiss_invitation_popup_if_present(self):
         if getattr(self.driver, "_suppress_global_invitation_handling", False):
+            return False
+
+        if self._sync_invitation_306_from_buffer():
             return False
 
         if getattr(self.driver, "_invitation_306_received", False):
@@ -271,6 +289,7 @@ class WSEngine:
         with allure.step(f"WS Scan: Waiting for CMD {target}"):
             end = time.time() + timeout
             while time.time() < end:
+                self._sync_invitation_306_from_buffer()
                 self._dismiss_invitation_popup_if_present()
                 self._drain_ws_events()
                 start_idx = self._cursor if from_cursor else 0

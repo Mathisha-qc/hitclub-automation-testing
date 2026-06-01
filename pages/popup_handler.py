@@ -57,6 +57,11 @@ class PopupHandler(BasePage):
 
         self.driver._suppress_global_invitation_handling = True
         try:
+            self.ws._sync_invitation_306_from_buffer()
+            if self.driver._invitation_306_received:
+                print("[INFO] 306 already received earlier. Skipping invitation handling.")
+                return False, True
+
             self.ws._drain_ws_events()
             pending_305 = any(
                 str(ev.get("cmd")) == str(WS_CMD["INVITATION"])
@@ -86,6 +91,12 @@ class PopupHandler(BasePage):
             )
 
             try:
+                self.ws._sync_invitation_306_from_buffer()
+                if self.driver._invitation_306_received:
+                    received_306 = True
+                    print("[SUCCESS] CMD 306 received")
+                    return handled_305, received_306
+
                 ev_306 = self.ws._wait_for_cmd(
                     WS_CMD["INVITATION_CONFIRM"],
                     timeout=5,

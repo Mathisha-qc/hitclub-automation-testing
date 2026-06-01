@@ -24,7 +24,7 @@ class XocDiaGamePage(BasePage):
     CHAT_SEND = (1804, 578)
 
     BACK_BTN = (77, 214)
-    EXIT_BTN = (187, 330)
+    EXIT_BTN = (165, 428)
 
     # -----------------------------
     # Constructor
