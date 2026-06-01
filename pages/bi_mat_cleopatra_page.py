@@ -11,4 +11,4 @@ class BiMatGamePage(GenericSlotGamePage):
     spin_coord = (1632, 803)
     auto_hold_seconds = 2.0
     auto_run_seconds = 8.0
-    exit_btn = (170, 931)
+    exit_btn = (118, 992)
