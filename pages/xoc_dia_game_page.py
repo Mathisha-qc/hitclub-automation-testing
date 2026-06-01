@@ -163,6 +163,14 @@ class XocDiaGamePage(BasePage):
             wait_after=0.01
         )
 
+    @allure.step("Place CHAN Bet")
+    def place_chan_bet(self):
+
+        # Keep the chip select and bet click as one tight action chain.
+        self.select_1k_chip()
+        self.bet_chan()
+        return self.validating_bet()
+
     def validating_bet(self):
        
        bet_ev = self.ws._wait_for_cmd(
