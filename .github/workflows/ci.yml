@@ -60,7 +60,7 @@ jobs:
           set TEST_FAILED=0
           for %%F in (
            
-            tests\test_xoc_dia_flow.py
+            tests\test_bi_mat_cleopatra_flow.py
             
           ) do (
             echo ==================================================
