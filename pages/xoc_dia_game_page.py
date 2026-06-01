@@ -80,7 +80,7 @@ class XocDiaGamePage(BasePage):
 
         self.ws._wait_for_cmd(
             XOCDIA_LIVE_CMD["SUBSCRIBE"],
-            timeout=5,
+            timeout=2,
             expected_direction="send"
         )
         print("Subscribed")
@@ -90,7 +90,7 @@ class XocDiaGamePage(BasePage):
 
         self.ws._wait_for_cmd(
             XOCDIA_LIVE_CMD["JOIN_ROOM"],
-            timeout=5,
+            timeout=2,
             from_cursor=True,
             expected_direction="send"
         )
