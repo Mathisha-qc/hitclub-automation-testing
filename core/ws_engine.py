@@ -73,6 +73,9 @@ class WSEngine:
         return best_score, best_loc, best_size
 
     def _dismiss_invitation_popup_if_present(self):
+        if getattr(self.driver, "_suppress_global_invitation_handling", False):
+            return False
+
         if getattr(self.driver, "_invitation_306_received", False):
             return False
 

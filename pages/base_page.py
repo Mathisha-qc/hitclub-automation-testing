@@ -205,6 +205,9 @@ class BasePage:
             time.sleep(wait_after)
 
     def _dismiss_invitation_popup_if_present(self, confidence=0.72):
+        if getattr(self.driver, "_suppress_global_invitation_handling", False):
+            return False
+
         if self.driver._invitation_306_received:
             return False
 

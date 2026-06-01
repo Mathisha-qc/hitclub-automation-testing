@@ -112,8 +112,16 @@ def login_and_clear_popups(driver, username=None, password=None, captcha=None):
         print("[INFO] Starting smart cleanup...")
         # 1. Handle Static Popup
         popup._clear_warning_popup()
-        # 2. Handle Main UI Popup
+
+        # 2. First invitation check before the main UI popup
+        handled_305, received_306 = popup._handle_invitation(context_msg="before UI")
+
+        # 3. Handle Main UI Popup
         popup._clear_main_ui_popup()
+
+        # 4. Second invitation check after the main UI popup
+        if not handled_305 or not received_306:
+            popup._handle_invitation(context_msg="after UI")
 
         print("[INFO] Cleanup finished.")
 

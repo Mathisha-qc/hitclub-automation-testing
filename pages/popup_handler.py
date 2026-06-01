@@ -40,8 +40,65 @@ class PopupHandler(BasePage):
 
     def _handle_invitation(self, context_msg=""):
         """
-        Invitation handling is now global in the WebSocket engine.
-        This method remains only as a compatibility wrapper for older callers.
+        Handles invitation popup explicitly for lobby cleanup:
+        - checks 305 from websocket buffer
+        - verifies the popup image
+        - clicks once
+        - waits for 306 after the click
         """
-        print(f"[INFO] Invitation handling is global now; skipping popup-handler path ({context_msg}).")
-        return False, self.driver._invitation_306_received
+        print(f"[INFO] Checking for Invitation ({context_msg})...")
+
+        if self.driver._invitation_306_received:
+            print("[INFO] 306 already received earlier. Skipping invitation handling.")
+            return False, True
+
+        handled_305 = False
+        received_306 = False
+
+        self.driver._suppress_global_invitation_handling = True
+        try:
+            self.ws._drain_ws_events()
+            pending_305 = any(
+                str(ev.get("cmd")) == str(WS_CMD["INVITATION"])
+                for ev in self.ws._ws_buffer[-30:]
+            )
+
+            popup_visible = self._is_image_on_screen("invitation_popup.png")
+
+            if pending_305:
+                print(f"[ALERT] CMD 305 detected via WebSocket ({context_msg})")
+                if not popup_visible:
+                    print("[INFO] Waiting for UI to render the invitation popup...")
+                    popup_visible = self._wait_for_image_on_screen("invitation_popup.png", timeout=3)
+
+            if not pending_305 and not popup_visible:
+                print(f"[INFO] Invitation popup NOT present ({context_msg})")
+                return False, False
+
+            print("[SUCCESS] Invitation verified on screen.")
+            handled_305 = True
+            print("[INFO] clicking invitation...")
+            self._interact_canvas(
+                x=812,
+                y=671,
+                wait_after=2,
+                suppress_invitation_handling=True
+            )
+
+            try:
+                ev_306 = self.ws._wait_for_cmd(
+                    WS_CMD["INVITATION_CONFIRM"],
+                    timeout=5,
+                    from_cursor=True,
+                    expected_direction=None
+                )
+                if ev_306:
+                    received_306 = True
+                    self.driver._invitation_306_received = True
+                    print("[SUCCESS] CMD 306 received")
+            except AssertionError:
+                print("[WARN] 306 not received")
+        finally:
+            self.driver._suppress_global_invitation_handling = False
+
+        return handled_305, received_306
