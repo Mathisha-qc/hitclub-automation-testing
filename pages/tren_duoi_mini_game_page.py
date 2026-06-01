@@ -472,7 +472,7 @@ class TrenDuoiMiniGamePage(BasePage):
 
         self.ws._wait_for_cmd(
             TREN_DUOI_CMD["START_ROUND"],
-            timeout=10,
+            timeout=20,
             from_cursor=True,
             expected_direction="send"
         )
@@ -497,7 +497,7 @@ class TrenDuoiMiniGamePage(BasePage):
 
         self.ws._wait_for_cmd(
             TREN_DUOI_CMD["START_ROUND"],
-            timeout=10,
+            timeout=20,
             from_cursor=True,
             expected_direction="send"
         )

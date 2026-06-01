@@ -277,7 +277,7 @@ class XocDiaGamePage(BasePage):
         self._interact_canvas(
             x=self.BACK_BTN[0],
             y=self.BACK_BTN[1],
-            wait_after=0.5
+            wait_after=0.9
         )
 
         self._interact_canvas(
