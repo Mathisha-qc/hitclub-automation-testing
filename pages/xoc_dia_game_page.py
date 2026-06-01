@@ -17,8 +17,8 @@ class XocDiaGamePage(BasePage):
 
     CHIP_1K = (769, 881)
 
-    BET_CHAN = (668, 506)
-    BET_LE = (1268, 523)
+    BET_CHAN = (670, 518)
+    BET_LE = (1268, 518)
 
     CHAT_BOX = (1559, 583)
     CHAT_SEND = (1804, 578)
