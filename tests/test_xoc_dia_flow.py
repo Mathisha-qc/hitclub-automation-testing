@@ -60,11 +60,7 @@ def test_xoc_dia_open_flow(driver):
 
     with allure.step(f"Place CHAN Bet: {chip_amount}"):
 
-        xd_page.select_1k_chip()
-
-        xd_page.bet_chan()
-
-        bet_amount = xd_page.validating_bet()
+        bet_amount = xd_page.place_chan_bet()
 
         assert bet_amount == chip_amount, \
             f"Bet mismatch. Expected={chip_amount}, Actual={bet_amount}"
