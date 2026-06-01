@@ -60,6 +60,7 @@ jobs:
           set TEST_FAILED=0
           for %%F in (
             tests\test_xoc_dia_flow.py
+            
           ) do (
             echo ==================================================
             if exist "%%F" (
