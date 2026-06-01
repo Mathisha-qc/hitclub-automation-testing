@@ -80,7 +80,7 @@ class XocDiaGamePage(BasePage):
 
         self.ws._wait_for_cmd(
             XOCDIA_LIVE_CMD["SUBSCRIBE"],
-            timeout=10,
+            timeout=5,
             expected_direction="send"
         )
         print("Subscribed")
@@ -90,7 +90,7 @@ class XocDiaGamePage(BasePage):
 
         self.ws._wait_for_cmd(
             XOCDIA_LIVE_CMD["JOIN_ROOM"],
-            timeout=10,
+            timeout=5,
             expected_direction="send"
         )
         print("JOIN ROOM")
@@ -100,7 +100,7 @@ class XocDiaGamePage(BasePage):
 
         self.ws._wait_for_cmd(
             XOCDIA_LIVE_CMD["BET_START"],
-            timeout=70,
+            timeout=30,
             from_cursor=True
         )
 
@@ -140,7 +140,7 @@ class XocDiaGamePage(BasePage):
         self._interact_canvas(
             x=self.CHIP_1K[0],
             y=self.CHIP_1K[1],
-            wait_after=0.1
+            wait_after=0.01
         )
 
     @allure.step("Bet CHAN")
@@ -149,7 +149,7 @@ class XocDiaGamePage(BasePage):
         self._interact_canvas(
             x=self.BET_CHAN[0],
             y=self.BET_CHAN[1],
-            wait_after=0.1
+            wait_after=0.01
         )
 
     @allure.step("Bet LE")
@@ -158,14 +158,14 @@ class XocDiaGamePage(BasePage):
         self._interact_canvas(
             x=self.BET_LE[0],
             y=self.BET_LE[1],
-            wait_after=0.1
+            wait_after=0.01
         )
 
     def validating_bet(self):
        
        bet_ev = self.ws._wait_for_cmd(
             XOCDIA_LIVE_CMD["PLACE_BET"],
-            timeout=5,
+            timeout=2,
             from_cursor=True,
             expected_direction="send"
         )
